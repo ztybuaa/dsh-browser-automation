@@ -11,6 +11,18 @@ export interface BrowserConfig {
   executablePath?: string
   /** Navigation timeout in milliseconds. */
   timeoutMs: number
+  /** Proxy server URL, e.g. http://127.0.0.1:7897. Omit for a direct connection. */
+  proxy?: string
+  /** Cap on characters returned by browser_extract. */
+  maxChars?: number
+  /** Browser channel (e.g. 'chrome') to use the installed Chrome instead of bundled chromium. */
+  channel?: string
+  /** Persistent profile directory; login/cookies survive across sessions when set. */
+  userDataDir?: string
+  /** Start the browser minimized to the taskbar. */
+  minimized?: boolean
+  /** CDP endpoint (e.g. http://127.0.0.1:9222) to attach to an already-running Chrome. */
+  cdpUrl?: string
 }
 
 /** One element in a snapshot, addressed by its 1-based `ref`. */
@@ -25,6 +37,14 @@ export interface PageSnapshot {
   title: string
   url: string
   elements: SnapshotElement[]
+}
+
+/** Truncate text at a character cap without splitting a surrogate pair. */
+function truncate(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text
+  let end = maxChars
+  while (end > 0 && (text.charCodeAt(end) & 0xfc00) === 0xdc00) end -= 1
+  return `${text.slice(0, end)}\n…(truncated)`
 }
 
 /** Project a snapshot to model-facing prose. */
@@ -51,16 +71,18 @@ export class BrowserSession {
   private readonly context: BrowserContext
   private readonly config: BrowserConfig
   private readonly homeDir: string
+  private readonly ownsBrowser: boolean
   readonly page: Page
   /** ref (1-based index) -> live locator, captured by the most recent snapshot. */
   private refs = new Map<number, Locator>()
 
-  private constructor(browser: Browser | null, context: BrowserContext, page: Page, config: BrowserConfig, homeDir: string) {
+  private constructor(browser: Browser | null, context: BrowserContext, page: Page, config: BrowserConfig, homeDir: string, ownsBrowser: boolean) {
     this.browser = browser
     this.context = context
     this.page = page
     this.config = config
     this.homeDir = homeDir
+    this.ownsBrowser = ownsBrowser
   }
 
   /** Launch a browser and open a fresh page. */
@@ -71,11 +93,28 @@ export class BrowserSession {
       '--no-first-run',
       '--disable-background-networking',
       '--disable-blink-features=AutomationControlled',
+      ...(config.minimized ? ['--start-minimized'] : []),
     ]
     const options = {
       headless: config.headless,
+      ...(config.channel !== undefined ? { channel: config.channel } : {}),
+      ...(config.proxy !== undefined ? { proxy: { server: config.proxy, bypass: '<local>,localhost,127.0.0.1,::1' } } : {}),
       args,
       ...(config.executablePath !== undefined ? { executablePath: config.executablePath } : {}),
+    }
+    if (config.cdpUrl !== undefined) {
+      // Attach to an already-running Chrome: reuse its login state and profile.
+      const browser = await chromium.connectOverCDP(config.cdpUrl)
+      const context = browser.contexts()[0]
+      const page = await context.newPage()
+      return new BrowserSession(browser, context, page, config, '', false)
+    }
+    if (config.userDataDir !== undefined) {
+      // Persistent profile: login/cookies survive across sessions.
+      const context = await chromium.launchPersistentContext(config.userDataDir, options)
+      const browser = context.browser()
+      const page = context.pages()[0] ?? await context.newPage()
+      return new BrowserSession(browser, context, page, config, '', true)
     }
     // A private HOME keeps the browser self-contained: profile, crashpad, and
     // cache land under this temp dir instead of the user's real profile.
@@ -83,7 +122,7 @@ export class BrowserSession {
     const browser = await chromium.launch({ ...options, env: { ...process.env, HOME: homeDir } })
     const context = await browser.newContext()
     const page = await context.newPage()
-    return new BrowserSession(browser, context, page, config, homeDir)
+    return new BrowserSession(browser, context, page, config, homeDir, true)
   }
 
   /** Open a URL and wait for its load event. */
@@ -132,6 +171,23 @@ export class BrowserSession {
     await locator.fill(text, { timeout: this.config.timeoutMs })
   }
 
+  /** Scroll the page by a pixel amount in the given direction. */
+  async scroll(direction: 'up' | 'down', amount: number): Promise<void> {
+    const delta = direction === 'down' ? amount : -amount
+    await this.page.evaluate((n) => window.scrollBy(0, n), delta)
+  }
+
+  /** Capture the current viewport as a PNG at the given path. */
+  async screenshot(path: string): Promise<void> {
+    await this.page.screenshot({ path, timeout: this.config.timeoutMs })
+  }
+
+  /** Extract the visible text content of the page body. */
+  async extractText(): Promise<string> {
+    const text = await this.page.locator('body').innerText().catch(() => '')
+    return truncate(text, this.config.maxChars ?? 20000)
+  }
+
   /** Press a keyboard key on the focused element (e.g. Enter, Escape, Tab). */
   async pressKey(key: string): Promise<void> {
     await this.page.keyboard.press(key)
@@ -170,6 +226,13 @@ export class BrowserSession {
 
   /** Close the browser and release its resources. */
   async close(): Promise<void> {
+    if (!this.ownsBrowser) {
+      // CDP: we borrowed the user's running Chrome — close only our page, leave their browser intact.
+      await this.page.close().catch(() => {})
+      return
+    }
+    // Close the context first: for a persistent profile this flushes cookies
+    // to disk before the browser shuts down.
     await this.context.close().catch(() => {})
     await this.browser?.close().catch(() => {})
     if (this.homeDir) rmSync(this.homeDir, { recursive: true, force: true })

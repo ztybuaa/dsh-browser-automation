@@ -1,4 +1,5 @@
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
+import { resolve } from 'node:path'
 import { BrowserSessionManager, formatSnapshot, type PageSnapshot } from './session.ts'
 
 /** The canonical output shape shared by navigate and snapshot. */
@@ -24,7 +25,7 @@ const snapshotSchema = {
   },
 } as const
 
-/** The canonical output shape for click/type acknowledgements. */
+/** The canonical output shape for click/type/close acknowledgements. */
 const okSchema = {
   type: 'object',
   additionalProperties: false,
@@ -42,8 +43,14 @@ function renderOk(_args: unknown, value: { message: string }): { type: 'text'; t
   return [{ type: 'text', text: value.message }]
 }
 
+/** Resolve the requested screenshot path, defaulting under `screenshotDir`. */
+function screenshotPath(screenshotDir: string, requested?: string): string {
+  if (requested !== undefined && requested.trim() !== '') return resolve(requested)
+  return resolve(screenshotDir, `browser-${Date.now()}.png`)
+}
+
 /** Register the browser tools against a session manager. */
-export function browserTools(manager: BrowserSessionManager): ToolDefinition[] {
+export function browserTools(manager: BrowserSessionManager, screenshotDir: string): ToolDefinition[] {
   return [
     defineTool({
       name: 'browser_navigate',
@@ -106,6 +113,59 @@ export function browserTools(manager: BrowserSessionManager): ToolDefinition[] {
         const session = await manager.requireSession(exec.agent)
         await session.pressKey(args.key)
         return { ok: true, message: `pressed ${args.key}` }
+      },
+    }),
+    defineTool({
+      name: 'browser_scroll',
+      description: 'Scroll the page up or down by a pixel amount.',
+      parameters: {
+        direction: { type: 'string', required: true, description: 'Either "up" or "down"' },
+        amount: { type: 'number', description: 'Pixels to scroll; defaults to 500' },
+      },
+      output: { schema: okSchema, render: renderOk },
+      async execute(args, exec) {
+        if (args.direction !== 'up' && args.direction !== 'down') {
+          throw new Error(`browser-use: direction must be "up" or "down", got "${args.direction}"`)
+        }
+        const session = await manager.requireSession(exec.agent)
+        await session.scroll(args.direction, args.amount ?? 500)
+        return { ok: true, message: `scrolled ${args.direction}` }
+      },
+    }),
+    defineTool({
+      name: 'browser_screenshot',
+      description: 'Capture the current page as a PNG and return the absolute path of the saved image.',
+      parameters: {
+        path: { type: 'string', description: 'Optional file path for the PNG; defaults to browser-<timestamp>.png under the screenshot dir' },
+      },
+      output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: `Screenshot saved to: ${value}` }] },
+      async execute(args, exec) {
+        const session = await manager.requireSession(exec.agent)
+        const path = screenshotPath(screenshotDir, args.path)
+        await session.screenshot(path)
+        return path
+      },
+    }),
+    defineTool({
+      name: 'browser_extract',
+      description: 'Extract the visible text content of the current page.',
+      parameters: {
+        mode: { type: 'string', description: 'Extraction mode; only "text" is supported for now' },
+      },
+      output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: value }] },
+      async execute(_args, exec) {
+        const session = await manager.requireSession(exec.agent)
+        return await session.extractText()
+      },
+    }),
+    defineTool({
+      name: 'browser_close',
+      description: 'Close the current browser session and release its resources. A later browser tool starts a fresh session.',
+      parameters: {},
+      output: { schema: okSchema, render: renderOk },
+      async execute(_args, exec) {
+        const closed = await manager.closeSession(exec.agent)
+        return { ok: true, message: closed ? 'browser session closed' : 'no active browser session to close' }
       },
     }),
   ]
