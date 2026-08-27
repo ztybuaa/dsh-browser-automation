@@ -1,4 +1,4 @@
-import { chromium, type Browser, type BrowserContext, type Locator, type Page } from 'playwright'
+import { chromium, type Browser, type BrowserContext, type Locator, type Page, type Response } from 'playwright'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -53,6 +53,22 @@ function truncate(text: string, maxChars: number): string {
   let end = maxChars
   while (end > 0 && (text.charCodeAt(end) & 0xfc00) === 0xdc00) end -= 1
   return `${text.slice(0, end)}\n…(truncated)`
+}
+
+/** Parse a JSON body, stripping common anti-XSSI prefixes (e.g. `)]}'`). Returns undefined when not JSON. */
+function parseJsonBody(raw: string): unknown {
+  let json = raw.trim().replace(/^\)\]\}'\s*/, '').replace(/^while\(1\);\s*/, '')
+  try {
+    return JSON.parse(json)
+  } catch {
+    const idx = json.search(/[{[]/)
+    if (idx > 0) json = json.slice(idx)
+    try {
+      return JSON.parse(json)
+    } catch {
+      return undefined
+    }
+  }
 }
 
 /** Interactive ARIA widget roles the snapshot selector covers, alongside native tags. */
@@ -138,6 +154,8 @@ export class BrowserSession {
   readonly page: Page
   /** ref (1-based index) -> live locator, captured by the most recent snapshot. */
   private refs = new Map<number, Locator>()
+  /** JSON API responses the page has loaded (bounded, newest last), exposed to the agent. */
+  private readonly jsonResponses: Array<{ url: string; body: unknown }> = []
 
   private constructor(browser: Browser | null, context: BrowserContext, page: Page, config: BrowserConfig, homeDir: string, ownsBrowser: boolean) {
     this.browser = browser
@@ -146,6 +164,25 @@ export class BrowserSession {
     this.config = config
     this.homeDir = homeDir
     this.ownsBrowser = ownsBrowser
+    page.on('response', (resp) => this.captureJson(resp))
+  }
+
+  /** Capture JSON API responses (bounded) as they arrive, so the agent can read page data even when the frontend doesn't render it. */
+  private captureJson(resp: Response): void {
+    const contentType = resp.headers()['content-type'] ?? ''
+    if (!contentType.includes('json') && !contentType.includes('javascript')) return
+    resp.text().then((raw) => {
+      const body = parseJsonBody(raw)
+      if (body !== undefined) {
+        this.jsonResponses.push({ url: resp.url(), body })
+        if (this.jsonResponses.length > 30) this.jsonResponses.shift()
+      }
+    }).catch(() => { /* non-text body */ })
+  }
+
+  /** The JSON API responses captured so far (newest last). */
+  getJsonResponses(): Array<{ url: string; body: unknown }> {
+    return this.jsonResponses
   }
 
   /** Launch a browser and open a fresh page. */

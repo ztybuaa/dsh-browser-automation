@@ -164,6 +164,17 @@ export function browserTools(manager: BrowserSessionManager, screenshotDir: stri
       },
     }),
     defineTool({
+      name: 'browser_json',
+      description: 'Return the JSON data the current page has loaded via API requests (fetch/XHR). Use when the page loads data asynchronously or fails to render it — the underlying data is often still present in these responses.',
+      parameters: {},
+      output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
+      async execute(_args, exec) {
+        const session = await manager.requireSession(exec.agent)
+        const text = JSON.stringify(session.getJsonResponses().map((e) => ({ url: e.url.slice(0, 200), body: e.body })))
+        return text.length > 20000 ? `${text.slice(0, 20000)}\n…(truncated)` : text
+      },
+    }),
+    defineTool({
       name: 'browser_download',
       description: 'Click the element referenced by `ref` and capture the triggered file download; saves it and returns its path plus a content preview.',
       parameters: {
