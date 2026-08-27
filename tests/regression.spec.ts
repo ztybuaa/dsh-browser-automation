@@ -102,4 +102,29 @@ describe('regression fixes', () => {
       await session.close()
     }
   })
+
+  it('clears stale refs after navigate', async () => {
+    const session = await BrowserSession.create({ headless: true, timeoutMs: 15000 })
+    try {
+      await session.page.setContent('<button>A</button>')
+      await session.snapshot()
+      await session.navigate('about:blank')
+      await expect(session.click(1)).rejects.toThrow(/snapshot first/)
+    } finally {
+      await session.close()
+    }
+  })
+
+  it('reports a readable error when a ref goes stale', async () => {
+    const session = await BrowserSession.create({ headless: true, timeoutMs: 3000 })
+    try {
+      await session.page.setContent('<button>A</button>')
+      await session.snapshot()
+      // 元素被彻底移除（无同匹配元素）：click 超时，报可读错误而非裸抛
+      await session.page.setContent('<p>nothing here</p>')
+      await expect(session.click(1)).rejects.toThrow(/browser_snapshot first/)
+    } finally {
+      await session.close()
+    }
+  })
 })

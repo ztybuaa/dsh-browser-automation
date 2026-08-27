@@ -39,6 +39,20 @@ beforeAll(async () => {
       case '/submit':
         res.end(`<html><head><title>Submitted</title></head><body><p>Hello, ${url.searchParams.get('name') ?? ''}</p></body></html>`)
         break
+      case '/slow':
+        res.end('<html><head><title>Slow</title></head><body><p>loading</p><script>setTimeout(()=>{document.body.innerHTML="<p>ready</p>"},1500)</script></body></html>')
+        break
+      case '/hover':
+        res.end('<html><head><title>Hover</title></head><body><button id="h">Hover me</button><p id="out"></p><script>document.getElementById("h").addEventListener("mouseenter",()=>{document.getElementById("out").textContent="hovered"})</script></body></html>')
+        break
+      case '/dl':
+        res.end('<html><head><title>Download</title></head><body><a id="dl" href="/file.csv" download>Download csv</a></body></html>')
+        break
+      case '/file.csv':
+        res.setHeader('content-type', 'text/csv')
+        res.setHeader('content-disposition', 'attachment; filename="data.csv"')
+        res.end('a,b,c\n1,2,3\n')
+        break
       default:
         res.statusCode = 404
         res.end('not found')
@@ -154,5 +168,39 @@ describe('browser tools', () => {
     const reopened = await call('browser_navigate', { url: base })
     expect(reopened.isError).toBe(false)
     expect((reopened.value as PageSnapshot).title).toBe('Home')
+  })
+
+  it('waits for text to appear', async () => {
+    await call('browser_navigate', { url: `${base}/slow` })
+    const r = await call('browser_wait', { text: 'ready', timeout: 15000 })
+    expect(r.isError).toBe(false)
+    expect(String((await call('browser_extract', { mode: 'text' })).value)).toContain('ready')
+  })
+
+  it('hovers an element', async () => {
+    await call('browser_navigate', { url: `${base}/hover` })
+    const snap = (await call('browser_snapshot', {})).value as PageSnapshot
+    const ref = refOf(snap, 'button', 'Hover me')
+    const r = await call('browser_hover', { ref })
+    expect(r.isError).toBe(false)
+    expect(String((await call('browser_extract', { mode: 'text' })).value)).toContain('hovered')
+  })
+
+  it('evaluates a read-only expression', async () => {
+    await call('browser_navigate', { url: base })
+    const r = await call('browser_evaluate', { expression: 'location.href' })
+    expect(r.isError).toBe(false)
+    expect(String(r.value)).toContain('127.0.0.1')
+  })
+
+  it('downloads a file by clicking a ref', async () => {
+    await call('browser_navigate', { url: `${base}/dl` })
+    const snap = (await call('browser_snapshot', {})).value as PageSnapshot
+    const ref = refOf(snap, 'link', 'Download csv')
+    const r = await call('browser_download', { ref })
+    expect(r.isError).toBe(false)
+    const v = r.value as { path: string; preview: string }
+    expect(existsSync(v.path)).toBe(true)
+    expect(v.preview).toContain('a,b,c')
   })
 })
