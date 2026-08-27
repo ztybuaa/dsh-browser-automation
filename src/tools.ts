@@ -19,6 +19,7 @@ const snapshotSchema = {
           ref: { type: 'number', required: true },
           role: { type: 'string', required: true },
           name: { type: 'string', required: true },
+          state: { type: 'string' },
         },
       },
     },
