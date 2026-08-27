@@ -1,0 +1,72 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { createServer, type Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
+import { BrowserSessionManager } from '../src/session.ts'
+
+let server: Server
+let base: string
+
+beforeAll(async () => {
+  server = createServer((req, res) => {
+    const url = new URL(req.url ?? '/', 'http://127.0.0.1')
+    res.setHeader('content-type', 'text/html; charset=utf-8')
+    if (url.pathname === '/') {
+      res.end('<html><head><title>Home</title></head><body><h1>Hello Browser</h1></body></html>')
+    } else {
+      res.statusCode = 404
+      res.end('not found')
+    }
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
+  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+})
+
+afterAll(async () => {
+  await new Promise<void>((resolve) => server.close(() => resolve()))
+})
+
+describe('BrowserSessionManager', () => {
+  it('navigates a URL for a keyed session', async () => {
+    const manager = new BrowserSessionManager({ headless: true, timeoutMs: 15000 })
+    const key = { id: 'a' }
+    try {
+      const session = await manager.requireSession(key)
+      await session.navigate(base)
+      expect(await session.page.title()).toBe('Home')
+    } finally {
+      await manager.dispose()
+    }
+  })
+
+  it('isolates sessions per agent key', async () => {
+    const manager = new BrowserSessionManager({ headless: true, timeoutMs: 15000 })
+    const keyA = { id: 'a' }
+    const keyB = { id: 'b' }
+    try {
+      const a = await manager.requireSession(keyA)
+      const b = await manager.requireSession(keyB)
+      const aAgain = await manager.requireSession(keyA)
+      expect(a).not.toBe(b)
+      expect(a).toBe(aAgain)
+      expect(manager.liveSessionCount).toBe(2)
+    } finally {
+      await manager.dispose()
+    }
+  })
+
+  it('closes one session without touching others, and dispose closes the rest', async () => {
+    const manager = new BrowserSessionManager({ headless: true, timeoutMs: 15000 })
+    const keyA = { id: 'a' }
+    const keyB = { id: 'b' }
+    await manager.requireSession(keyA)
+    await manager.requireSession(keyB)
+    expect(manager.liveSessionCount).toBe(2)
+
+    const closed = await manager.closeSession(keyA)
+    expect(closed).toBe(true)
+    expect(manager.liveSessionCount).toBe(1)
+
+    await manager.dispose()
+    expect(manager.liveSessionCount).toBe(0)
+  })
+})
