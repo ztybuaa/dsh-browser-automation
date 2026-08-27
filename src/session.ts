@@ -307,9 +307,24 @@ export class BrowserSession {
     await this.page.screenshot({ path, timeout: this.config.timeoutMs })
   }
 
-  /** Extract the visible text content of the page body. */
+  /** Extract the page's text content, including hidden data tables that innerText skips. */
   async extractText(): Promise<string> {
-    const text = await this.page.locator('body').innerText().catch(() => '')
+    const text = await this.page.evaluate(() => {
+      const body = document.body
+      if (!body) return ''
+      let out = body.innerText ?? ''
+      // 数据表（含无障碍/屏幕阅读器用的隐藏表，如 Google Trends 的 x y1 数据表）innerText 可能漏掉；
+      // 序列化所有 table（单元格 tab 分隔、行换行），若 innerText 里没有就补上。
+      for (const table of Array.from(body.querySelectorAll('table'))) {
+        const rows = Array.from((table as HTMLTableElement).rows).map((r) =>
+          Array.from(r.cells).map((c) => (c.textContent ?? '').trim()).join('\t'),
+        )
+        if (!rows.length) continue
+        const serialized = rows.join('\n')
+        if (!out.includes(serialized)) out += `\n${serialized}`
+      }
+      return out
+    }).catch(() => '')
     return truncate(text, this.config.maxChars ?? 20000)
   }
 
