@@ -1,4 +1,4 @@
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
+import { chromium, type Browser, type BrowserContext, type Locator, type Page } from 'playwright'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -13,6 +13,35 @@ export interface BrowserConfig {
   timeoutMs: number
 }
 
+/** One element in a snapshot, addressed by its 1-based `ref`. */
+export interface SnapshotElement {
+  ref: number
+  role: string
+  name: string
+}
+
+/** The accessibility snapshot a tool returns to the model. */
+export interface PageSnapshot {
+  title: string
+  url: string
+  elements: SnapshotElement[]
+}
+
+/** Project a snapshot to model-facing prose. */
+export function formatSnapshot(snapshot: PageSnapshot): string {
+  const lines = [
+    `Title: ${snapshot.title}`,
+    `URL: ${snapshot.url}`,
+    '',
+    'Interactive elements:',
+  ]
+  for (const el of snapshot.elements) {
+    lines.push(`[${el.ref}] ${el.role} "${el.name}"`)
+  }
+  if (snapshot.elements.length === 0) lines.push('(none)')
+  return lines.join('\n')
+}
+
 /**
  * One live browser session: a launched chromium, its context, and a single
  * page. The owning manager owns its lifecycle.
@@ -23,6 +52,8 @@ export class BrowserSession {
   private readonly config: BrowserConfig
   private readonly homeDir: string
   readonly page: Page
+  /** ref (1-based index) -> live locator, captured by the most recent snapshot. */
+  private refs = new Map<number, Locator>()
 
   private constructor(browser: Browser | null, context: BrowserContext, page: Page, config: BrowserConfig, homeDir: string) {
     this.browser = browser
@@ -60,9 +91,81 @@ export class BrowserSession {
     await this.page.goto(url, { waitUntil: 'load', timeout: this.config.timeoutMs })
   }
 
+  /**
+   * Project the current page into an accessibility snapshot: title, URL, and
+   * an indexed list of interactive elements. The 1-based indices become the
+   * `ref`s that click/type resolve against this snapshot.
+   */
+  async snapshot(): Promise<PageSnapshot> {
+    const title = await this.page.title().catch(() => '')
+    const url = this.page.url()
+    const selector = 'a[href]:visible, button:visible, input:visible, select:visible, textarea:visible, [role="button"]:visible, [role="link"]:visible, [role="textbox"]:visible, [role="combobox"]:visible, [contenteditable="true"]:visible'
+    const locator = this.page.locator(selector)
+    const count = await locator.count()
+    const elements: SnapshotElement[] = []
+    const refs = new Map<number, Locator>()
+    for (let i = 0; i < count; i++) {
+      const el = locator.nth(i)
+      const ref = i + 1
+      elements.push({ ref, role: await this.roleOf(el), name: await this.nameOf(el) })
+      refs.set(ref, el)
+    }
+    this.refs = refs
+    return { title, url, elements }
+  }
+
+  /** Click the element addressed by `ref` from the most recent snapshot. */
+  async click(ref: number): Promise<void> {
+    const locator = this.refs.get(ref)
+    if (locator === undefined) {
+      throw new Error(`browser-use: no element for ref ${ref}; call snapshot first`)
+    }
+    await locator.click({ timeout: this.config.timeoutMs })
+  }
+
+  /** Type text into the input addressed by `ref` from the most recent snapshot. */
+  async type(ref: number, text: string): Promise<void> {
+    const locator = this.refs.get(ref)
+    if (locator === undefined) {
+      throw new Error(`browser-use: no element for ref ${ref}; call snapshot first`)
+    }
+    await locator.fill(text, { timeout: this.config.timeoutMs })
+  }
+
+  /** Press a keyboard key on the focused element (e.g. Enter, Escape, Tab). */
+  async pressKey(key: string): Promise<void> {
+    await this.page.keyboard.press(key)
+  }
+
   /** Whether the underlying browser is still connected. */
   isAlive(): boolean {
     return this.browser?.isConnected() ?? false
+  }
+
+  private async roleOf(loc: Locator): Promise<string> {
+    const explicit = await loc.getAttribute('role').catch(() => null)
+    if (explicit) return explicit
+    const tag = await loc.evaluate((el) => (el as HTMLElement).tagName.toLowerCase()).catch(() => '')
+    if (tag === 'input') {
+      const type = (await loc.getAttribute('type').catch(() => null)) ?? 'text'
+      if (type === 'submit' || type === 'button' || type === 'image' || type === 'reset') return 'button'
+      if (type === 'checkbox') return 'checkbox'
+      if (type === 'radio') return 'radio'
+      return 'textbox'
+    }
+    const byTag: Record<string, string> = { a: 'link', button: 'button', select: 'combobox', textarea: 'textbox' }
+    return byTag[tag] ?? tag
+  }
+
+  private async nameOf(loc: Locator): Promise<string> {
+    const label = await loc.getAttribute('aria-label').catch(() => null)
+    if (label) return label
+    const placeholder = await loc.getAttribute('placeholder').catch(() => null)
+    if (placeholder) return placeholder
+    const value = await loc.getAttribute('value').catch(() => null)
+    if (value) return value
+    const text = await loc.innerText().catch(() => '')
+    return text.trim()
   }
 
   /** Close the browser and release its resources. */
