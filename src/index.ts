@@ -1,0 +1,66 @@
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
+import { BrowserSessionManager } from './session.ts'
+
+/** Cordis plugin name used by loader diagnostics. */
+export const name = 'browser-use'
+
+/** The tool registry the plugin registers into. */
+export const inject = ['tools']
+
+/** Plugin configuration. Invalid values fail plugin load. */
+export interface Config {
+  /** Launch browsers headless when true; default is a visible window. */
+  headless: boolean
+  /** Path to a system browser executable. Omit to use Playwright's bundled chromium. */
+  executablePath?: string
+  /** Navigation timeout in milliseconds. */
+  timeoutMs: number
+  /** Directory where screenshots land when no path is requested. */
+  screenshotDir: string
+  /** Proxy server for the browser, e.g. http://127.0.0.1:7897. Auto-detected when omitted. */
+  proxy?: string
+  /** Cap on characters returned by browser_extract. */
+  maxChars: number
+  /** Browser channel (e.g. 'chrome') to use the installed Chrome instead of bundled chromium. */
+  channel?: string
+  /** Persistent profile directory; login/cookies survive across sessions when set. */
+  userDataDir?: string
+  /** Start the browser minimized to the taskbar. */
+  minimized?: boolean
+  /** CDP endpoint (e.g. http://127.0.0.1:9222) to attach to an already-running Chrome. */
+  cdpUrl?: string
+}
+
+/** Schemastery schema validating {@link Config}; deployment-varying fields default here. */
+export const Config: z<Config> = z.object({
+  headless: z.boolean().default(false),
+  executablePath: z.string(),
+  timeoutMs: z.number().default(30000),
+  screenshotDir: z.string().default('.'),
+  proxy: z.string(),
+  maxChars: z.number().default(20000),
+  channel: z.string(),
+  userDataDir: z.string(),
+  minimized: z.boolean().default(false),
+  cdpUrl: z.string(),
+})
+
+/**
+ * Mount the browser-use plugin: create the per-agent session manager and make
+ * sure its live browser processes never outlive the plugin.
+ */
+export function apply(ctx: Context, config: Config): void {
+  const manager = new BrowserSessionManager({
+    headless: config.headless,
+    timeoutMs: config.timeoutMs,
+    ...(config.executablePath !== undefined ? { executablePath: config.executablePath } : {}),
+  })
+  // Teardown is fire-and-forget so plugin unload never blocks on browser shutdown.
+  ctx.effect(() => {
+    return () => {
+      void manager.dispose()
+    }
+  })
+  // browser_* tools land in T2.
+}
