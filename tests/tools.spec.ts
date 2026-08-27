@@ -53,6 +53,13 @@ beforeAll(async () => {
         res.setHeader('content-disposition', 'attachment; filename="data.csv"')
         res.end('a,b,c\n1,2,3\n')
         break
+      case '/jsonpage':
+        res.end('<html><head><title>JSON</title></head><body><p>loading</p><script>fetch("/data.json").then(r=>r.text())</script></body></html>')
+        break
+      case '/data.json':
+        res.setHeader('content-type', 'application/javascript; charset=utf-8')
+        res.end(')]}\'\n{"items":[{"name":"apple","value":100}]}')
+        break
       default:
         res.statusCode = 404
         res.end('not found')
@@ -202,5 +209,14 @@ describe('browser tools', () => {
     const v = r.value as { path: string; preview: string }
     expect(existsSync(v.path)).toBe(true)
     expect(v.preview).toContain('a,b,c')
+  })
+
+  it('captures JSON API responses (including anti-XSSI prefix)', async () => {
+    await call('browser_navigate', { url: `${base}/jsonpage` })
+    await new Promise((r) => setTimeout(r, 800))
+    const r = await call('browser_json', {})
+    expect(r.isError).toBe(false)
+    expect(String(r.value)).toContain('apple')
+    expect(String(r.value)).toContain('data.json')
   })
 })
