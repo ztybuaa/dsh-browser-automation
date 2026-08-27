@@ -24,6 +24,8 @@ export interface Config {
   proxy?: string
   /** Cap on characters returned by browser_extract. */
   maxChars: number
+  /** Cap on elements listed in a snapshot; beyond it the snapshot is truncated. */
+  maxElements: number
   /** Browser channel (e.g. 'chrome') to use the installed Chrome instead of bundled chromium. */
   channel?: string
   /** Persistent profile directory; login/cookies survive across sessions when set. */
@@ -42,6 +44,7 @@ export const Config: z<Config> = z.object({
   screenshotDir: z.string().default('.'),
   proxy: z.string(),
   maxChars: z.number().default(20000),
+  maxElements: z.number().default(200),
   channel: z.string(),
   userDataDir: z.string(),
   minimized: z.boolean().default(false),
@@ -59,6 +62,7 @@ export function apply(ctx: Context, config: Config): void {
     headless: config.headless,
     timeoutMs: config.timeoutMs,
     maxChars: config.maxChars,
+    maxElements: config.maxElements,
     ...(config.executablePath !== undefined ? { executablePath: config.executablePath } : {}),
     ...(config.channel !== undefined ? { channel: config.channel } : {}),
     ...(config.userDataDir !== undefined ? { userDataDir: config.userDataDir } : {}),

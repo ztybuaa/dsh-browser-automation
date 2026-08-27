@@ -23,6 +23,7 @@ const snapshotSchema = {
         },
       },
     },
+    notice: { type: 'string' },
   },
 } as const
 
@@ -62,8 +63,9 @@ export function browserTools(manager: BrowserSessionManager, screenshotDir: stri
       output: { schema: snapshotSchema, render: renderSnapshot },
       async execute(args, exec) {
         const session = await manager.requireSession(exec.agent)
+        const notice = manager.takeRecreateNotice()
         await session.navigate(args.url)
-        return await session.snapshot()
+        return { ...(await session.snapshot()), ...(notice ? { notice } : {}) }
       },
     }),
     defineTool({
@@ -73,7 +75,8 @@ export function browserTools(manager: BrowserSessionManager, screenshotDir: stri
       output: { schema: snapshotSchema, render: renderSnapshot },
       async execute(_args, exec) {
         const session = await manager.requireSession(exec.agent)
-        return await session.snapshot()
+        const notice = manager.takeRecreateNotice()
+        return { ...(await session.snapshot()), ...(notice ? { notice } : {}) }
       },
     }),
     defineTool({
@@ -85,8 +88,9 @@ export function browserTools(manager: BrowserSessionManager, screenshotDir: stri
       output: { schema: okSchema, render: renderOk },
       async execute(args, exec) {
         const session = await manager.requireSession(exec.agent)
+        const notice = manager.takeRecreateNotice()
         await session.click(args.ref)
-        return { ok: true, message: `clicked ref ${args.ref}` }
+        return { ok: true, message: notice ? `${notice} clicked ref ${args.ref}` : `clicked ref ${args.ref}` }
       },
     }),
     defineTool({
@@ -99,8 +103,9 @@ export function browserTools(manager: BrowserSessionManager, screenshotDir: stri
       output: { schema: okSchema, render: renderOk },
       async execute(args, exec) {
         const session = await manager.requireSession(exec.agent)
+        const notice = manager.takeRecreateNotice()
         await session.type(args.ref, args.text)
-        return { ok: true, message: `typed into ref ${args.ref}` }
+        return { ok: true, message: notice ? `${notice} typed into ref ${args.ref}` : `typed into ref ${args.ref}` }
       },
     }),
     defineTool({
@@ -114,6 +119,72 @@ export function browserTools(manager: BrowserSessionManager, screenshotDir: stri
         const session = await manager.requireSession(exec.agent)
         await session.pressKey(args.key)
         return { ok: true, message: `pressed ${args.key}` }
+      },
+    }),
+    defineTool({
+      name: 'browser_wait',
+      description: 'Wait for page content to appear: a fixed delay (ms), a visible CSS selector, or body text. Use after navigate/click when content loads asynchronously.',
+      parameters: {
+        ms: { type: 'number', description: 'Wait this many milliseconds' },
+        selector: { type: 'string', description: 'Wait until this CSS selector becomes visible' },
+        text: { type: 'string', description: 'Wait until this text appears in the page body' },
+        timeout: { type: 'number', description: 'Max wait in ms; defaults to timeoutMs' },
+      },
+      output: { schema: okSchema, render: renderOk },
+      async execute(args, exec) {
+        const session = await manager.requireSession(exec.agent)
+        await session.wait({ ms: args.ms, selector: args.selector, text: args.text, timeout: args.timeout })
+        return { ok: true, message: 'waited' }
+      },
+    }),
+    defineTool({
+      name: 'browser_hover',
+      description: 'Hover the interactive element referenced by `ref` (reveals tooltips and hover states).',
+      parameters: {
+        ref: { type: 'number', required: true, description: 'The 1-based ref of the element from the snapshot' },
+      },
+      output: { schema: okSchema, render: renderOk },
+      async execute(args, exec) {
+        const session = await manager.requireSession(exec.agent)
+        await session.hover(args.ref)
+        return { ok: true, message: `hovered ref ${args.ref}` }
+      },
+    }),
+    defineTool({
+      name: 'browser_evaluate',
+      description: 'Evaluate a read-only JavaScript expression in the page (e.g. window.__state, document.title) and return the result. Use when data lives in JS state rather than visible text.',
+      parameters: {
+        expression: { type: 'string', required: true, description: 'A JavaScript expression to evaluate, e.g. JSON.stringify(window.__data)' },
+      },
+      output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
+      async execute(args, exec) {
+        const session = await manager.requireSession(exec.agent)
+        const value = await session.evaluate(args.expression)
+        return typeof value === 'string' ? value : JSON.stringify(value)
+      },
+    }),
+    defineTool({
+      name: 'browser_download',
+      description: 'Click the element referenced by `ref` and capture the triggered file download; saves it and returns its path plus a content preview.',
+      parameters: {
+        ref: { type: 'number', required: true, description: 'The 1-based ref of the download link/button from the snapshot' },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            path: { type: 'string', required: true },
+            preview: { type: 'string', required: true },
+          },
+        },
+        render: (_args, value: { path: string; preview: string }) => [
+          { type: 'text', text: `Downloaded to: ${value.path}\nPreview:\n${value.preview}` },
+        ],
+      },
+      async execute(args, exec) {
+        const session = await manager.requireSession(exec.agent)
+        return await session.download(args.ref, screenshotDir)
       },
     }),
     defineTool({
