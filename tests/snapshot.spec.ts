@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BrowserSession } from '../src/session.ts'
+import { BrowserSession, formatSnapshot } from '../src/session.ts'
 
 describe('BrowserSession.snapshot', () => {
   it('returns an indexed list of interactive elements with roles and names', async () => {
@@ -51,6 +51,35 @@ describe('BrowserSession.snapshot', () => {
       expect(opt?.state).toBe('selected=true')
       const chk = snap.elements.find((e) => e.role === 'checkbox')
       expect(chk?.state).toBe('checked=true')
+    } finally {
+      await session.close()
+    }
+  })
+
+  it('uses associated labels and aria-labelledby for names', async () => {
+    const session = await BrowserSession.create({ headless: true, timeoutMs: 15000 })
+    try {
+      await session.page.setContent(`<html><body>
+        <label for="uname">Username</label><input id="uname">
+        <span id="desc">Password hint</span><input aria-labelledby="desc">
+      </body></html>`)
+      const snap = await session.snapshot()
+      const names = snap.elements.map((e) => e.name)
+      expect(names).toContain('Username')
+      expect(names).toContain('Password hint')
+    } finally {
+      await session.close()
+    }
+  })
+
+  it('caps snapshot elements at maxElements and marks truncation', async () => {
+    const session = await BrowserSession.create({ headless: true, timeoutMs: 15000, maxElements: 5 })
+    try {
+      await session.page.setContent(`<body>${Array.from({ length: 20 }, (_, i) => `<button>b${i}</button>`).join('')}</body>`)
+      const snap = await session.snapshot()
+      expect(snap.elements.length).toBe(5)
+      expect(snap.truncated).toBe(true)
+      expect(formatSnapshot(snap)).toContain('truncated')
     } finally {
       await session.close()
     }

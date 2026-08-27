@@ -69,4 +69,25 @@ describe('BrowserSessionManager', () => {
     await manager.dispose()
     expect(manager.liveSessionCount).toBe(0)
   })
+
+  it('flags a one-shot notice when a dead session is auto-recreated', async () => {
+    const manager = new BrowserSessionManager({ headless: true, timeoutMs: 15000 })
+    const key = { id: 'a' }
+    try {
+      const s1 = await manager.requireSession(key)
+      await s1.close()
+      const s2 = await manager.requireSession(key)
+      expect(s2).not.toBe(s1)
+      const notice = manager.takeRecreateNotice()
+      expect(notice).toContain('recreated')
+      // 一次性：取过一次后消失
+      expect(manager.takeRecreateNotice()).toBeUndefined()
+      // 正常路径不产生 notice
+      const s3 = await manager.requireSession(key)
+      expect(s3).toBe(s2)
+      expect(manager.takeRecreateNotice()).toBeUndefined()
+    } finally {
+      await manager.dispose()
+    }
+  })
 })

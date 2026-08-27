@@ -1,5 +1,5 @@
 import { chromium, type Browser, type BrowserContext, type Locator, type Page } from 'playwright'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -15,6 +15,8 @@ export interface BrowserConfig {
   proxy?: string
   /** Cap on characters returned by browser_extract. */
   maxChars?: number
+  /** Cap on the number of elements listed in a snapshot; beyond it the snapshot is truncated. */
+  maxElements?: number
   /** Browser channel (e.g. 'chrome') to use the installed Chrome instead of bundled chromium. */
   channel?: string
   /** Persistent profile directory; login/cookies survive across sessions when set. */
@@ -39,6 +41,10 @@ export interface PageSnapshot {
   title: string
   url: string
   elements: SnapshotElement[]
+  /** Set when the element list was capped at maxElements. */
+  truncated?: boolean
+  /** One-shot notice about the session (e.g. "recreated after a crash"). */
+  notice?: string
 }
 
 /** Truncate text at a character cap without splitting a surrogate pair. */
@@ -59,6 +65,49 @@ const TAG_SELECTOR = 'a[href]:visible, button:visible, input:visible, select:vis
 const ROLE_SELECTOR = INTERACTIVE_ROLES.map((r) => `[role="${r}"]:visible`).join(', ')
 const SNAPSHOT_SELECTOR = `${TAG_SELECTOR}, ${ROLE_SELECTOR}`
 
+/** Compute role/name/state for a batch of elements in one in-page round-trip. */
+const computeElementInfos = (els: Element[]): Array<{ role: string; name: string; state?: string }> =>
+  els.map((el) => {
+    const tag = el.tagName.toLowerCase()
+    let role = el.getAttribute('role') ?? ''
+    if (!role) {
+      if (tag === 'input') {
+        const type = el.getAttribute('type') ?? 'text'
+        if (type === 'submit' || type === 'button' || type === 'image' || type === 'reset') role = 'button'
+        else if (type === 'checkbox') role = 'checkbox'
+        else if (type === 'radio') role = 'radio'
+        else role = 'textbox'
+      } else {
+        const byTag: Record<string, string> = { a: 'link', button: 'button', select: 'combobox', textarea: 'textbox' }
+        role = byTag[tag] ?? tag
+      }
+    }
+    let name = el.getAttribute('aria-label') ?? ''
+    if (!name) {
+      const labelledby = el.getAttribute('aria-labelledby')
+      if (labelledby) {
+        name = labelledby.split(/\s+/).map((id) => (document.getElementById(id)?.textContent ?? '').trim()).join(' ').trim()
+      }
+    }
+    if (!name) {
+      const labels = (el as HTMLInputElement).labels
+      if (labels && labels.length > 0) name = (labels[0].textContent ?? '').trim()
+    }
+    if (!name) name = el.getAttribute('placeholder') ?? ''
+    if (!name) name = el.getAttribute('value') ?? ''
+    if (!name) name = (el.textContent ?? '').trim()
+    let state: string | undefined
+    for (const attr of ['aria-checked', 'aria-selected', 'aria-expanded']) {
+      const v = el.getAttribute(attr)
+      if (v) {
+        state = `${attr.slice('aria-'.length)}=${v}`
+        break
+      }
+    }
+    if (!state && (el as HTMLInputElement).disabled) state = 'disabled'
+    return { role, name, ...(state ? { state } : {}) }
+  })
+
 /** Project a snapshot to model-facing prose. */
 export function formatSnapshot(snapshot: PageSnapshot): string {
   const lines = [
@@ -71,6 +120,8 @@ export function formatSnapshot(snapshot: PageSnapshot): string {
     lines.push(`[${el.ref}] ${el.role} "${el.name}"${el.state ? ` (${el.state})` : ''}`)
   }
   if (snapshot.elements.length === 0) lines.push('(none)')
+  if (snapshot.truncated) lines.push(`(snapshot truncated at ${snapshot.elements.length} elements — call browser_extract for full content)`)
+  if (snapshot.notice) lines.unshift(`Notice: ${snapshot.notice}`)
   return lines.join('\n')
 }
 
@@ -139,48 +190,110 @@ export class BrowserSession {
 
   /** Open a URL and wait for its load event. */
   async navigate(url: string): Promise<void> {
+    // Stale refs from a previous page must not survive a navigation.
+    this.refs.clear()
     await this.page.goto(url, { waitUntil: 'load', timeout: this.config.timeoutMs })
   }
 
   /**
    * Project the current page into an accessibility snapshot: title, URL, and
    * an indexed list of interactive elements. The 1-based indices become the
-   * `ref`s that click/type resolve against this snapshot.
+   * `ref`s that click/type resolve against this snapshot. Element metadata is
+   * collected in a single in-page round-trip and capped at maxElements.
    */
   async snapshot(): Promise<PageSnapshot> {
     const title = await this.page.title().catch(() => '')
     const url = this.page.url()
     const locator = this.page.locator(SNAPSHOT_SELECTOR)
-    const count = await locator.count()
+    const infos = await locator.evaluateAll(computeElementInfos)
+    const max = this.config.maxElements ?? 200
+    const truncated = infos.length > max
+    const kept = truncated ? infos.slice(0, max) : infos
     const elements: SnapshotElement[] = []
     const refs = new Map<number, Locator>()
-    for (let i = 0; i < count; i++) {
-      const el = locator.nth(i)
+    for (let i = 0; i < kept.length; i++) {
       const ref = i + 1
-      const state = await this.stateOf(el)
-      elements.push({ ref, role: await this.roleOf(el), name: await this.nameOf(el), ...(state ? { state } : {}) })
-      refs.set(ref, el)
+      elements.push({ ref, ...kept[i] })
+      refs.set(ref, locator.nth(i))
     }
     this.refs = refs
-    return { title, url, elements }
+    return { title, url, elements, ...(truncated ? { truncated: true } : {}) }
   }
 
   /** Click the element addressed by `ref` from the most recent snapshot. */
   async click(ref: number): Promise<void> {
     const locator = this.refs.get(ref)
     if (locator === undefined) {
-      throw new Error(`browser-use: no element for ref ${ref}; call snapshot first`)
+      throw new Error(`browser-use: ref ${ref} not in the most recent snapshot — the page may have changed; call browser_snapshot first`)
     }
-    await locator.click({ timeout: this.config.timeoutMs })
+    try {
+      await locator.click({ timeout: this.config.timeoutMs })
+    } catch (e) {
+      throw new Error(`browser-use: click on ref ${ref} failed (element detached or not clickable) — call browser_snapshot first. Details: ${(e as Error).message}`)
+    }
   }
 
   /** Type text into the input addressed by `ref` from the most recent snapshot. */
   async type(ref: number, text: string): Promise<void> {
     const locator = this.refs.get(ref)
     if (locator === undefined) {
-      throw new Error(`browser-use: no element for ref ${ref}; call snapshot first`)
+      throw new Error(`browser-use: ref ${ref} not in the most recent snapshot — the page may have changed; call browser_snapshot first`)
     }
-    await locator.fill(text, { timeout: this.config.timeoutMs })
+    try {
+      await locator.fill(text, { timeout: this.config.timeoutMs })
+    } catch (e) {
+      throw new Error(`browser-use: type into ref ${ref} failed (element detached or not an input) — call browser_snapshot first. Details: ${(e as Error).message}`)
+    }
+  }
+
+  /** Hover the element addressed by `ref` from the most recent snapshot. */
+  async hover(ref: number): Promise<void> {
+    const locator = this.refs.get(ref)
+    if (locator === undefined) {
+      throw new Error(`browser-use: ref ${ref} not in the most recent snapshot — the page may have changed; call browser_snapshot first`)
+    }
+    await locator.hover({ timeout: this.config.timeoutMs })
+  }
+
+  /** Wait for content: a fixed delay, a visible selector, or body text. */
+  async wait(opts: { ms?: number; selector?: string; text?: string; timeout?: number }): Promise<void> {
+    const timeout = opts.timeout ?? this.config.timeoutMs
+    if (opts.selector !== undefined) {
+      await this.page.waitForSelector(opts.selector, { state: 'visible', timeout })
+    } else if (opts.text !== undefined) {
+      await this.page.waitForFunction((t) => (document.body.innerText ?? '').includes(t), opts.text, { timeout })
+    } else if (opts.ms !== undefined) {
+      await new Promise((r) => setTimeout(r, opts.ms))
+    } else {
+      throw new Error('browser-use: browser_wait needs one of ms, selector, or text')
+    }
+  }
+
+  /** Evaluate a read-only expression in the page and return the result. */
+  async evaluate(expression: string): Promise<unknown> {
+    return await this.page.evaluate(expression)
+  }
+
+  /** Click `ref`, capture the triggered download, save it under `dir`, and preview its content. */
+  async download(ref: number, dir: string): Promise<{ path: string; preview: string }> {
+    const locator = this.refs.get(ref)
+    if (locator === undefined) {
+      throw new Error(`browser-use: ref ${ref} not in the most recent snapshot — the page may have changed; call browser_snapshot first`)
+    }
+    const [download] = await Promise.all([
+      this.page.waitForEvent('download', { timeout: this.config.timeoutMs }),
+      locator.click({ timeout: this.config.timeoutMs }),
+    ])
+    const filename = download.suggestedFilename().replace(/[\\/:*?"<>|]/g, '_')
+    const target = join(dir, filename)
+    await download.saveAs(target)
+    let preview = ''
+    try {
+      preview = readFileSync(target, 'utf8').slice(0, 500)
+    } catch {
+      /* binary or unreadable file: no preview */
+    }
+    return { path: target, preview }
   }
 
   /** Scroll the page by a pixel amount in the given direction. */
@@ -210,42 +323,6 @@ export class BrowserSession {
     return this.browser?.isConnected() ?? false
   }
 
-  private async roleOf(loc: Locator): Promise<string> {
-    const explicit = await loc.getAttribute('role').catch(() => null)
-    if (explicit) return explicit
-    const tag = await loc.evaluate((el) => (el as HTMLElement).tagName.toLowerCase()).catch(() => '')
-    if (tag === 'input') {
-      const type = (await loc.getAttribute('type').catch(() => null)) ?? 'text'
-      if (type === 'submit' || type === 'button' || type === 'image' || type === 'reset') return 'button'
-      if (type === 'checkbox') return 'checkbox'
-      if (type === 'radio') return 'radio'
-      return 'textbox'
-    }
-    const byTag: Record<string, string> = { a: 'link', button: 'button', select: 'combobox', textarea: 'textbox' }
-    return byTag[tag] ?? tag
-  }
-
-  private async nameOf(loc: Locator): Promise<string> {
-    const label = await loc.getAttribute('aria-label').catch(() => null)
-    if (label) return label
-    const placeholder = await loc.getAttribute('placeholder').catch(() => null)
-    if (placeholder) return placeholder
-    const value = await loc.getAttribute('value').catch(() => null)
-    if (value) return value
-    const text = await loc.innerText().catch(() => '')
-    return text.trim()
-  }
-
-  private async stateOf(loc: Locator): Promise<string | undefined> {
-    for (const attr of ['aria-checked', 'aria-selected', 'aria-expanded'] as const) {
-      const v = await loc.getAttribute(attr).catch(() => null)
-      if (v !== null && v !== undefined && v !== '') return `${attr.slice('aria-'.length)}=${v}`
-    }
-    const disabled = await loc.isDisabled().catch(() => false)
-    if (disabled) return 'disabled'
-    return undefined
-  }
-
   /** Close the browser and release its resources. */
   async close(): Promise<void> {
     if (!this.ownsBrowser) {
@@ -271,6 +348,7 @@ export class BrowserSessionManager {
   private readonly sessions = new WeakMap<object, BrowserSession>()
   private readonly live = new Set<BrowserSession>()
   private defaultSession: BrowserSession | undefined
+  private recreateNotice: string | undefined
 
   constructor(config: BrowserConfig) {
     this.config = config
@@ -284,6 +362,7 @@ export class BrowserSessionManager {
         if (existing.isAlive()) return existing
         this.sessions.delete(key)
         this.live.delete(existing)
+        this.recreateNotice = 'session was recreated (previous page lost) — navigate again'
       }
       const created = await this.createSession()
       this.sessions.set(key, created)
@@ -292,9 +371,17 @@ export class BrowserSessionManager {
     if (this.defaultSession !== undefined && !this.defaultSession.isAlive()) {
       this.live.delete(this.defaultSession)
       this.defaultSession = undefined
+      this.recreateNotice = 'session was recreated (previous page lost) — navigate again'
     }
     this.defaultSession ??= await this.createSession()
     return this.defaultSession
+  }
+
+  /** One-shot notice explaining why the agent's previous page is gone (consumed by tools). */
+  takeRecreateNotice(): string | undefined {
+    const notice = this.recreateNotice
+    this.recreateNotice = undefined
+    return notice
   }
 
   /** Close the session for one agent key (or the default when key is absent). */
