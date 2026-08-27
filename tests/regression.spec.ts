@@ -74,4 +74,32 @@ describe('regression fixes', () => {
       await new Promise<void>((resolve) => server.close(() => resolve()))
     }
   })
+
+  it('drives a custom listbox dropdown end to end', async () => {
+    const session = await BrowserSession.create({ headless: true, timeoutMs: 15000 })
+    try {
+      await session.page.setContent(`<html><body>
+        <div id="dd" role="listbox" aria-label="Sort">Sort</div>
+        <div id="opt" role="option" style="display:none">Rising</div>
+        <script>
+          document.getElementById('dd').addEventListener('click', () => {
+            document.getElementById('opt').style.display = 'block'
+          })
+        </script>
+      </body></html>`)
+      // 初始快照：listbox 可见，option 被 CSS 隐藏（:visible 过滤）
+      const before = await session.snapshot()
+      const ddRef = before.elements.find((e) => e.role === 'listbox')?.ref
+      expect(ddRef).toBeDefined()
+      expect(before.elements.some((e) => e.role === 'option')).toBe(false)
+      // 点开 listbox → option 变可见 → 再快照能看见 → 点 option
+      await session.click(ddRef!)
+      const after = await session.snapshot()
+      const opt = after.elements.find((e) => e.role === 'option')
+      expect(opt).toBeDefined()
+      await session.click(opt!.ref)
+    } finally {
+      await session.close()
+    }
+  })
 })
