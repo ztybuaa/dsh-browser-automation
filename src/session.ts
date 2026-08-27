@@ -30,6 +30,8 @@ export interface SnapshotElement {
   ref: number
   role: string
   name: string
+  /** Optional ARIA state (checked/selected/expanded/disabled), present only when the element has one. */
+  state?: string
 }
 
 /** The accessibility snapshot a tool returns to the model. */
@@ -47,6 +49,16 @@ function truncate(text: string, maxChars: number): string {
   return `${text.slice(0, end)}\n…(truncated)`
 }
 
+/** Interactive ARIA widget roles the snapshot selector covers, alongside native tags. */
+const INTERACTIVE_ROLES = [
+  'button', 'link', 'textbox', 'combobox', 'listbox', 'option', 'tab',
+  'menuitem', 'menuitemcheckbox', 'menuitemradio', 'checkbox', 'radio',
+  'switch', 'searchbox', 'slider', 'spinbutton', 'treeitem',
+] as const
+const TAG_SELECTOR = 'a[href]:visible, button:visible, input:visible, select:visible, textarea:visible, [contenteditable="true"]:visible'
+const ROLE_SELECTOR = INTERACTIVE_ROLES.map((r) => `[role="${r}"]:visible`).join(', ')
+const SNAPSHOT_SELECTOR = `${TAG_SELECTOR}, ${ROLE_SELECTOR}`
+
 /** Project a snapshot to model-facing prose. */
 export function formatSnapshot(snapshot: PageSnapshot): string {
   const lines = [
@@ -56,7 +68,7 @@ export function formatSnapshot(snapshot: PageSnapshot): string {
     'Interactive elements:',
   ]
   for (const el of snapshot.elements) {
-    lines.push(`[${el.ref}] ${el.role} "${el.name}"`)
+    lines.push(`[${el.ref}] ${el.role} "${el.name}"${el.state ? ` (${el.state})` : ''}`)
   }
   if (snapshot.elements.length === 0) lines.push('(none)')
   return lines.join('\n')
@@ -138,15 +150,15 @@ export class BrowserSession {
   async snapshot(): Promise<PageSnapshot> {
     const title = await this.page.title().catch(() => '')
     const url = this.page.url()
-    const selector = 'a[href]:visible, button:visible, input:visible, select:visible, textarea:visible, [role="button"]:visible, [role="link"]:visible, [role="textbox"]:visible, [role="combobox"]:visible, [contenteditable="true"]:visible'
-    const locator = this.page.locator(selector)
+    const locator = this.page.locator(SNAPSHOT_SELECTOR)
     const count = await locator.count()
     const elements: SnapshotElement[] = []
     const refs = new Map<number, Locator>()
     for (let i = 0; i < count; i++) {
       const el = locator.nth(i)
       const ref = i + 1
-      elements.push({ ref, role: await this.roleOf(el), name: await this.nameOf(el) })
+      const state = await this.stateOf(el)
+      elements.push({ ref, role: await this.roleOf(el), name: await this.nameOf(el), ...(state ? { state } : {}) })
       refs.set(ref, el)
     }
     this.refs = refs
@@ -222,6 +234,16 @@ export class BrowserSession {
     if (value) return value
     const text = await loc.innerText().catch(() => '')
     return text.trim()
+  }
+
+  private async stateOf(loc: Locator): Promise<string | undefined> {
+    for (const attr of ['aria-checked', 'aria-selected', 'aria-expanded'] as const) {
+      const v = await loc.getAttribute(attr).catch(() => null)
+      if (v !== null && v !== undefined && v !== '') return `${attr.slice('aria-'.length)}=${v}`
+    }
+    const disabled = await loc.isDisabled().catch(() => false)
+    if (disabled) return 'disabled'
+    return undefined
   }
 
   /** Close the browser and release its resources. */

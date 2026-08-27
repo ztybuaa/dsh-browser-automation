@@ -31,4 +31,28 @@ describe('BrowserSession.snapshot', () => {
       await session.close()
     }
   })
+
+  it('captures ARIA widget roles and their state', async () => {
+    const session = await BrowserSession.create({ headless: true, timeoutMs: 15000 })
+    try {
+      await session.page.setContent(`<html><body>
+        <div role="listbox" aria-label="Trending dropdown">Trending dropdown</div>
+        <div role="option" aria-selected="true">Rising</div>
+        <div role="tab">Overview</div>
+        <div role="menuitem">Save</div>
+        <div role="checkbox" aria-checked="true">Enable</div>
+      </body></html>`)
+      const snap = await session.snapshot()
+      const roles = snap.elements.map((e) => e.role)
+      expect(roles).toEqual(expect.arrayContaining(['listbox', 'option', 'tab', 'menuitem', 'checkbox']))
+      const listbox = snap.elements.find((e) => e.role === 'listbox')
+      expect(listbox?.name).toBe('Trending dropdown')
+      const opt = snap.elements.find((e) => e.role === 'option')
+      expect(opt?.state).toBe('selected=true')
+      const chk = snap.elements.find((e) => e.role === 'checkbox')
+      expect(chk?.state).toBe('checked=true')
+    } finally {
+      await session.close()
+    }
+  })
 })
