@@ -1,0 +1,8 @@
+research/
+_research/
+.firecrawl/
+node_modules/
+lib/
+workspace/
+browser-*.png
+*.png
