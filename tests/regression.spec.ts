@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { BrowserSession, BrowserSessionManager } from '../src/session.ts'
 
 describe('regression fixes', () => {
@@ -52,6 +54,24 @@ describe('regression fixes', () => {
       expect(s2).not.toBe(s1)
     } finally {
       await manager.dispose()
+    }
+  })
+
+  it('bypasses the proxy for localhost', async () => {
+    const server = createServer((_req, res) => {
+      res.setHeader('content-type', 'text/html; charset=utf-8')
+      res.end('<html><head><title>Local</title></head><body>ok</body></html>')
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    // 用一个必然失败的代理（无人监听端口）：若 localhost 未 bypass，导航就会走代理而失败
+    const session = await BrowserSession.create({ headless: true, timeoutMs: 15000, proxy: 'http://127.0.0.1:1' })
+    try {
+      await session.navigate(base)
+      expect(await session.page.title()).toBe('Local')
+    } finally {
+      await session.close()
+      await new Promise<void>((resolve) => server.close(() => resolve()))
     }
   })
 })

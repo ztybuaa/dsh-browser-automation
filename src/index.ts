@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { BrowserSessionManager } from './session.ts'
 import { browserTools } from './tools.ts'
+import { detectProxy } from './proxy.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'browser-use'
@@ -48,14 +49,22 @@ export const Config: z<Config> = z.object({
 })
 
 /**
- * Mount the browser-use plugin: create the per-agent session manager and make
- * sure its live browser processes never outlive the plugin.
+ * Mount the browser-use plugin: create the per-agent session manager, register
+ * the browser tools, and make sure live browser processes never outlive the
+ * plugin.
  */
 export function apply(ctx: Context, config: Config): void {
+  const proxy = detectProxy(config.proxy)
   const manager = new BrowserSessionManager({
     headless: config.headless,
     timeoutMs: config.timeoutMs,
+    maxChars: config.maxChars,
     ...(config.executablePath !== undefined ? { executablePath: config.executablePath } : {}),
+    ...(config.channel !== undefined ? { channel: config.channel } : {}),
+    ...(config.userDataDir !== undefined ? { userDataDir: config.userDataDir } : {}),
+    ...(config.minimized !== undefined ? { minimized: config.minimized } : {}),
+    ...(config.cdpUrl !== undefined ? { cdpUrl: config.cdpUrl } : {}),
+    ...(proxy !== undefined ? { proxy } : {}),
   })
   // Teardown is fire-and-forget so plugin unload never blocks on browser shutdown.
   ctx.effect(() => {
@@ -63,7 +72,7 @@ export function apply(ctx: Context, config: Config): void {
       void manager.dispose()
     }
   })
-  for (const tool of browserTools(manager)) {
+  for (const tool of browserTools(manager, config.screenshotDir)) {
     ctx.tools.register(tool)
   }
 }
