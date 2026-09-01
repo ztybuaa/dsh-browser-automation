@@ -1,5 +1,25 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { detectProxy } from '../src/proxy.ts'
+import { detectProxy, parseWindowsProxy } from '../src/proxy.ts'
+
+describe('parseWindowsProxy', () => {
+  it('returns undefined when the system proxy is disabled (ProxyEnable=0) even if ProxyServer is set', () => {
+    const out = [
+      'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
+      '    ProxyEnable    REG_DWORD    0x0',
+      '    ProxyServer    REG_SZ    127.0.0.1:7897',
+    ].join('\n')
+    expect(parseWindowsProxy(out)).toBeUndefined()
+  })
+
+  it('returns the server when the system proxy is enabled (ProxyEnable=1)', () => {
+    const out = [
+      'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
+      '    ProxyEnable    REG_DWORD    0x1',
+      '    ProxyServer    REG_SZ    127.0.0.1:7897',
+    ].join('\n')
+    expect(parseWindowsProxy(out)).toBe('http://127.0.0.1:7897')
+  })
+})
 
 describe('detectProxy', () => {
   it('prefers an explicit proxy', () => {
