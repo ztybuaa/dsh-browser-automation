@@ -1,5 +1,7 @@
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
-import { resolve } from 'node:path'
+import type { AttachmentId, AttachmentStore, ImageAttachmentRef, ImageMediaType } from '@deepseek-ai/dsh-attachment'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm'
+import { basename, resolve } from 'node:path'
 import { BrowserSessionManager, formatSnapshot, type PageSnapshot } from './session.ts'
 
 /** The canonical output shape shared by navigate and snapshot. */
@@ -24,6 +26,7 @@ const snapshotSchema = {
       },
     },
     notice: { type: 'string' },
+    truncated: { type: 'boolean' },
   },
 } as const
 
@@ -51,8 +54,66 @@ function screenshotPath(screenshotDir: string, requested?: string): string {
   return resolve(screenshotDir, `browser-${Date.now()}.png`)
 }
 
+/** The schema-shaped (unbranded) image metadata a screenshot outcome carries. */
+interface ScreenshotImageMeta {
+  attachmentId: string
+  mediaType: string
+  bytes: number
+  width: number
+  height: number
+  name?: string
+}
+
+/** Canonical screenshot outcome: the saved file path plus its durable image reference. */
+interface ScreenshotValue {
+  path: string
+  image: ScreenshotImageMeta
+}
+
+/** The screenshot output schema: a path plus a durable image reference. */
+const screenshotSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    path: { type: 'string', required: true },
+    image: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        attachmentId: { type: 'string', required: true },
+        mediaType: { type: 'string', required: true },
+        bytes: { type: 'number', required: true },
+        width: { type: 'number', required: true },
+        height: { type: 'number', required: true },
+        name: { type: 'string' },
+      },
+      required: true,
+    },
+  },
+} as const
+
+/** Brand the schema-shaped image metadata into the durable reference an image block carries. */
+function imageRefFromMeta(image: ScreenshotImageMeta): ImageAttachmentRef {
+  return {
+    attachmentId: image.attachmentId as AttachmentId,
+    mediaType: image.mediaType as ImageMediaType,
+    bytes: image.bytes,
+    width: image.width,
+    height: image.height,
+    ...(image.name !== undefined ? { name: image.name } : {}),
+  }
+}
+
+/** Project a screenshot outcome to model content: a path line plus the image block. */
+function renderScreenshot(_args: unknown, value: ScreenshotValue): ContentBlock[] {
+  return [
+    { type: 'text', text: `Screenshot saved to: ${value.path}` },
+    { type: 'image', attachment: imageRefFromMeta(value.image) },
+  ]
+}
+
 /** Register the browser tools against a session manager. */
-export function browserTools(manager: BrowserSessionManager, screenshotDir: string): ToolDefinition[] {
+export function browserTools(manager: BrowserSessionManager, screenshotDir: string, attachments: AttachmentStore): ToolDefinition[] {
   return [
     defineTool({
       name: 'browser_navigate',
@@ -217,16 +278,27 @@ export function browserTools(manager: BrowserSessionManager, screenshotDir: stri
     }),
     defineTool({
       name: 'browser_screenshot',
-      description: 'Capture the current page as a PNG and return the absolute path of the saved image.',
+      description: 'Capture the current page as a PNG, save it, and return the image itself plus its absolute path.',
       parameters: {
         path: { type: 'string', description: 'Optional file path for the PNG; defaults to browser-<timestamp>.png under the screenshot dir' },
       },
-      output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: `Screenshot saved to: ${value}` }] },
+      output: { schema: screenshotSchema, render: renderScreenshot },
       async execute(args, exec) {
         const session = await manager.requireSession(exec.agent)
         const path = screenshotPath(screenshotDir, args.path)
-        await session.screenshot(path)
-        return path
+        const data = await session.screenshot(path)
+        const ref = await attachments.saveImage({ data, mediaType: 'image/png', name: basename(path) })
+        return {
+          path,
+          image: {
+            attachmentId: ref.attachmentId,
+            mediaType: ref.mediaType,
+            bytes: ref.bytes,
+            width: ref.width,
+            height: ref.height,
+            ...(ref.name !== undefined ? { name: ref.name } : {}),
+          },
+        }
       },
     }),
     defineTool({

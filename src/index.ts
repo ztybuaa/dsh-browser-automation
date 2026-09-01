@@ -7,8 +7,8 @@ import { detectProxy } from './proxy.ts'
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'browser-use'
 
-/** The tool registry the plugin registers into. */
-export const inject = ['tools']
+/** The tool registry plus the durable image attachment store the plugin registers into. */
+export const inject = ['tools', 'attachments']
 
 /** Plugin configuration. Invalid values fail plugin load. */
 export interface Config {
@@ -76,7 +76,7 @@ export function apply(ctx: Context, config: Config): void {
       void manager.dispose()
     }
   })
-  for (const tool of browserTools(manager, config.screenshotDir)) {
+  for (const tool of browserTools(manager, config.screenshotDir, ctx.attachments)) {
     ctx.tools.register(tool)
   }
 }
