@@ -27,6 +27,9 @@ beforeAll(async () => {
       case '/':
         res.end('<html><head><title>Home</title></head><body><a href="/about">About</a><button>Go</button><input aria-label="Name"></body></html>')
         break
+      case '/many':
+        res.end(`<html><head><title>Many</title></head><body>${Array.from({ length: 250 }, (_, i) => `<a href="/l${i}">link ${i}</a>`).join('')}</body></html>`)
+        break
       case '/about':
         res.end('<html><head><title>About</title></head><body><p>About page</p></body></html>')
         break
@@ -120,6 +123,12 @@ describe('browser tools', () => {
     expect(snap.title).toBe('Home')
     expect(refOf(snap, 'link', 'About')).toBeGreaterThan(0)
     expect(refOf(snap, 'button', 'Go')).toBeGreaterThan(0)
+  })
+
+  it('marks a snapshot truncated when the page has more elements than maxElements', async () => {
+    const r = await call('browser_navigate', { url: `${base}/many` })
+    expect(r.isError).toBe(false)
+    expect((r.value as PageSnapshot).truncated).toBe(true)
   })
 
   it('clicks an element by ref', async () => {

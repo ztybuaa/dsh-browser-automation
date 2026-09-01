@@ -26,6 +26,7 @@ const snapshotSchema = {
       },
     },
     notice: { type: 'string' },
+    truncated: { type: 'boolean' },
   },
 } as const
 
