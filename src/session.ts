@@ -339,9 +339,9 @@ export class BrowserSession {
     await this.page.evaluate((n) => window.scrollBy(0, n), delta)
   }
 
-  /** Capture the current viewport as a PNG at the given path. */
-  async screenshot(path: string): Promise<void> {
-    await this.page.screenshot({ path, timeout: this.config.timeoutMs })
+  /** Capture the current viewport as a PNG at the given path, returning the encoded bytes. */
+  async screenshot(path: string): Promise<Buffer> {
+    return await this.page.screenshot({ path, timeout: this.config.timeoutMs })
   }
 
   /** Extract the page's text content, including hidden data tables that innerText skips. */

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { Context } from '@deepseek-ai/cordis'
-import { CallId } from '@deepseek-ai/dsh-llm'
+import { CallId, type ContentBlock } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { apply, Config, inject, name } from '../src/index.ts'
@@ -72,6 +72,18 @@ beforeAll(async () => {
   ctx = new Context()
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
+  ctx.provide('attachments', {
+    async saveImage(input: { data: Uint8Array; mediaType: 'image/png'; name?: string }) {
+      return {
+        attachmentId: 'sha256:test-screenshot',
+        mediaType: input.mediaType,
+        bytes: input.data.length,
+        width: 1280,
+        height: 720,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+      }
+    },
+  })
   fiber = await ctx.plugin({ name, inject, Config, apply }, { headless: true, timeoutMs: 15000, screenshotDir: shotDir })
 })
 
@@ -84,14 +96,14 @@ afterAll(async () => {
 const signal = new AbortController().signal
 let callSeq = 0
 
-async function call(toolName: string, args: Record<string, unknown>): Promise<{ isError: boolean; value: any }> {
+async function call(toolName: string, args: Record<string, unknown>): Promise<{ isError: boolean; value: any; content: ContentBlock[] }> {
   const result = await ctx.tools.execute({
     signal,
     callId: CallId(`c${++callSeq}`),
     name: toolName,
     arguments: args,
   })
-  return { isError: result.isError, value: result.value }
+  return { isError: result.isError, value: result.value, content: result.content }
 }
 
 function refOf(snap: PageSnapshot, role: string, label: string): number {
@@ -139,13 +151,18 @@ describe('browser tools', () => {
     expect(r.isError).toBe(false)
   })
 
-  it('saves a non-empty screenshot via the tool', async () => {
+  it('saves a non-empty screenshot and returns its image block', async () => {
     await call('browser_navigate', { url: base })
     const r = await call('browser_screenshot', {})
     expect(r.isError).toBe(false)
-    const path = String(r.value)
-    expect(existsSync(path)).toBe(true)
-    expect(statSync(path).size).toBeGreaterThan(0)
+    const value = r.value as { path: string; image: { attachmentId: string; mediaType: string; bytes: number; width: number; height: number; name?: string } }
+    expect(existsSync(value.path)).toBe(true)
+    expect(statSync(value.path).size).toBeGreaterThan(0)
+    expect(value.image.mediaType).toBe('image/png')
+    expect(value.image.bytes).toBeGreaterThan(0)
+    const imageBlocks = r.content.filter((b) => b.type === 'image')
+    expect(imageBlocks).toHaveLength(1)
+    expect(imageBlocks[0].attachment.attachmentId).toBe(value.image.attachmentId)
   })
 
   it('extracts page text via the tool', async () => {

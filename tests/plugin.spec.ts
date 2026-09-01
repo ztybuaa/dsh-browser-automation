@@ -14,6 +14,11 @@ describe('dsh-browser-use plugin', () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
     await ctx.plugin(ToolRuntime)
+    ctx.provide('attachments', {
+      async saveImage() {
+        return { attachmentId: 'sha256:test', mediaType: 'image/png', bytes: 1, width: 1, height: 1 }
+      },
+    })
     const fiber = await ctx.plugin({ name, inject, Config, apply }, {})
     expect(fiber).toBeDefined()
     await fiber.dispose()
