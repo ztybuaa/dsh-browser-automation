@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/overseas-marketing-browser-use/evidence.schema.json",
+  "type": "object",
+  "required": ["task_id", "revision", "run_id", "retrieved_at", "records"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "revision": { "type": "integer" },
+    "run_id": { "type": "string" },
+    "retrieved_at": { "type": "string", "format": "date-time" },
+    "records": { "type": "array", "items": { "type": "object", "required": ["record_type", "source_url", "access_status"], "properties": { "record_type": { "type": "string" }, "source_url": { "type": "string", "format": "uri" }, "access_status": { "type": "string" }, "query": { "type": "string" }, "rank": { "type": "integer", "minimum": 1 }, "data": { "type": "object" } }, "additionalProperties": false } }
+  },
+  "additionalProperties": false
+}

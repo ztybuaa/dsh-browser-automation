@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/overseas-marketing-browser-use/responses.schema.json",
+  "$defs": {
+    "rd-001": {
+      "type": "object",
+      "required": ["comments", "images"],
+      "properties": {
+        "comments": { "type": "array", "maxItems": 5, "items": { "type": "object", "required": ["text", "comment_url", "post_url"], "properties": { "text": { "type": "string" }, "comment_url": { "type": "string", "format": "uri" }, "post_url": { "type": "string", "format": "uri" } }, "additionalProperties": false } },
+        "images": { "type": "array", "maxItems": 3, "items": { "type": "object", "required": ["image_url", "visible_facts"], "properties": { "image_url": { "type": "string", "format": "uri" }, "visible_facts": { "type": "string" } }, "additionalProperties": false } }
+      },
+      "additionalProperties": false
+    },
+    "rd-002": {
+      "type": "object",
+      "required": ["comments"],
+      "properties": { "comments": { "type": "array", "maxItems": 5, "items": { "type": "object", "required": ["text", "score", "comment_url", "post_url"], "properties": { "text": { "type": "string" }, "score": { "type": "string" }, "comment_url": { "type": "string", "format": "uri" }, "post_url": { "type": "string", "format": "uri" } }, "additionalProperties": false } } },
+      "additionalProperties": false
+    },
+    "rd-003": {
+      "type": "object",
+      "required": ["posts"],
+      "properties": { "posts": { "type": "array", "maxItems": 8, "items": { "type": "object", "required": ["title", "post_url", "score"], "properties": { "title": { "type": "string" }, "post_url": { "type": "string", "format": "uri" }, "score": { "type": "string" } }, "additionalProperties": false } } },
+      "additionalProperties": false
+    },
+    "rd-004": {
+      "type": "object",
+      "required": ["setup_posts", "customer_service_posts"],
+      "properties": {
+        "setup_posts": { "type": "array", "maxItems": 3, "items": { "type": "string", "format": "uri" } },
+        "customer_service_posts": { "type": "array", "maxItems": 3, "items": { "type": "string", "format": "uri" } }
+      },
+      "additionalProperties": false
+    },
+    "rd-005": {
+      "type": "object",
+      "required": ["posts"],
+      "properties": { "posts": { "type": "array", "maxItems": 8, "items": { "type": "object", "required": ["post_url", "queries"], "properties": { "post_url": { "type": "string", "format": "uri" }, "queries": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["Jackery setup", "Jackery review", "Jackery customer service"] } } }, "additionalProperties": false } } },
+      "additionalProperties": false
+    },
+    "seo-001": {
+      "type": "object",
+      "required": ["results"],
+      "properties": { "results": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "object", "required": ["group", "official_count", "total_eligible_count", "official_share"], "properties": { "group": { "enum": ["homepower-3600", "explorer-5000"] }, "official_count": { "type": "integer", "minimum": 0 }, "total_eligible_count": { "type": "integer", "minimum": 0 }, "official_share": { "type": ["number", "null"], "minimum": 0, "maximum": 1 } }, "additionalProperties": false } } },
+      "additionalProperties": false
+    },
+    "seo-002": {
+      "type": "object",
+      "required": ["pages"],
+      "properties": { "pages": { "type": "array", "maxItems": 5, "items": { "type": "object", "required": ["url", "title_present", "h1_present", "canonical_present", "meta_description_present"], "properties": { "url": { "type": "string", "format": "uri" }, "title_present": { "type": "boolean" }, "h1_present": { "type": "boolean" }, "canonical_present": { "type": "boolean" }, "meta_description_present": { "type": "boolean" } }, "additionalProperties": false } } },
+      "additionalProperties": false
+    },
+    "seo-003": { "$ref": "#/$defs/opened-pages" },
+    "seo-004": { "$ref": "#/$defs/opened-pages" },
+    "seo-005": {
+      "type": "object",
+      "required": ["results"],
+      "properties": {
+        "results": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["query", "eligible_result_count", "top_urls"],
+            "properties": {
+              "query": { "enum": ["Jackery vs EcoFlow vs Bluetti vs Anker", "best portable power station Jackery EcoFlow Bluetti", "2kWh portable power station comparison"] },
+              "eligible_result_count": { "type": "integer", "minimum": 0, "maximum": 10 },
+              "top_urls": { "type": "array", "maxItems": 3, "items": { "type": "string", "format": "uri" } }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "opened-pages": {
+      "type": "object",
+      "required": ["pages"],
+      "properties": { "pages": { "type": "array", "maxItems": 5, "items": { "type": "object", "required": ["url", "access_status"], "properties": { "url": { "type": "string", "format": "uri" }, "access_status": { "enum": ["accessible", "partial", "blocked", "not_found", "error"] } }, "additionalProperties": false } } },
+      "additionalProperties": false
+    }
+  }
+}

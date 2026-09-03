@@ -1,0 +1,8 @@
+{
+  "task_id": "rd-003",
+  "revision": 5,
+  "protocol": "reddit-top-v1",
+  "collection": { "query": "Jackery review", "post_cards": 8, "open_posts": false },
+  "answer": { "posts": "all collected cards in displayed order" },
+  "checks": ["schema", "selection", "card_title", "displayed_score", "source_urls"]
+}

@@ -1,0 +1,25 @@
+[
+  {
+    "material_type": "reddit_post",
+    "source": {
+      "url": "https://www.reddit.com/r/Jackery/comments/1rr58wy/hp_3600_plus/",
+      "title": "Hp 3600 plus",
+      "platform": "reddit",
+      "community": "r/Jackery",
+      "author": "Born_Mix3431",
+      "query": "HomePower 3600 Plus UPS",
+      "entry_url": "https://www.reddit.com/r/Jackery/comments/1rr58wy/hp_3600_plus/",
+      "created_at": "6 months ago (UI label; absolute date not exposed)"
+    },
+    "captured_at": "2026-09-02T11:45:34Z",
+    "raw_text": "Ups mode, I bought the jackery 3600 plus under the impression that it would work as a ups but the jackery is not working as it should, the battery is discharging even though it is plugged into the wall and I have to take the plug off and then replug it. I tried to find on the app the UPS mode but couldn’t find it anywhere. Any ideas?",
+    "body_verbatim": "Ups mode, I bought the jackery 3600 plus under the impression that it would work as a ups but the jackery is not working as it should, the battery is discharging even though it is plugged into the wall and I have to take the plug off and then replug it. I tried to find on the app the UPS mode but couldn’t find it anywhere. Any ideas?",
+    "page_title": "Hp 3600 plus : r/Jackery",
+    "permalink": "https://www.reddit.com/r/Jackery/comments/1rr58wy/hp_3600_plus/",
+    "engagement": { "score": 3, "comment_count": 10 },
+    "access_status": "accessible",
+    "access_note": "Design sample captured from a real Chromium snapshot; the post and comment surface were readable.",
+    "image_evidence": null,
+    "video_metadata": null
+  }
+]

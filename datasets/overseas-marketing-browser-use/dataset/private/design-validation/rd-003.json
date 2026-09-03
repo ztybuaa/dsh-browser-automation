@@ -1,0 +1,25 @@
+[
+  {
+    "material_type": "reddit_post",
+    "source": {
+      "url": "https://www.reddit.com/r/Jackery/comments/1si3ghc/jackery_2000_plus_solar_charging/",
+      "title": "Jackery 2000 plus solar charging",
+      "platform": "reddit",
+      "community": "r/Jackery",
+      "author": "posttogoogle",
+      "query": "Jackery 2000 Plus solar charging",
+      "entry_url": "https://www.reddit.com/r/Jackery/comments/1si3ghc/jackery_2000_plus_solar_charging/",
+      "created_at": "5 months ago (UI label; absolute date not exposed)"
+    },
+    "captured_at": "2026-09-02T11:48:03Z",
+    "raw_text": "The author tested a Jackery 2000 Plus with six 200 watt solar panels and two Jackery series connectors, but saw only 520 watts of charging in full sun. Removing one panel from each side did not change the 520 watt input. Three panels were Jackery and three were Zoup, and the author asks whether others run six panels. A follow-up lists Zoup Voc 24.3V, VMP 20.16V, IMP 9.92A, ISC 10.5A; Jackery panels VOC 22V, VMP 18V, IMP 11.5A; and approximately 520 watts on the 2000 Plus and 250 watts on a 1000 v2.",
+    "body_verbatim": "I did a test today with my jackery 2000 plus and my solar panels. I have 6 200 watt solar panels and two jackery series connectors connected to both inputs. However I can only get 520 watts of charging in full sun. I disconnected one solar panel from each side so that I was running two per side and was still getting 520 watts of charging. This seems to indicate that the jackery is limiting the input to 520 watts. 3 of the solar panels are jackery. Two are the newer model one is the older model. The new models put out a little more watts than the older model. I have 3 zoup 200 watt solar panels that I am using with it. When all 6 are connected, I mix the jackery and zoup on each side so the setup matches. Is anyone running 6 solar panels with the 2000 plus? If so, how many watts are you getting input into the 2000 plus?",
+    "page_title": "Jackery 2000 plus solar charging : r/Jackery",
+    "permalink": "https://www.reddit.com/r/Jackery/comments/1si3ghc/jackery_2000_plus_solar_charging/",
+    "engagement": { "score": 7, "comment_count": 22 },
+    "access_status": "accessible",
+    "access_note": "Design sample captured from a real Chromium snapshot; the post follow-up and several technical replies were visible.",
+    "image_evidence": null,
+    "video_metadata": null
+  }
+]

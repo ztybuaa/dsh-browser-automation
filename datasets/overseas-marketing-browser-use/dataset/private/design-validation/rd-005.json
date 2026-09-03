@@ -1,0 +1,25 @@
+[
+  {
+    "material_type": "reddit_post",
+    "source": {
+      "url": "https://www.reddit.com/r/prepping/comments/1p8j8nb/2kwh_power_station_bluetti_ecoflow_or_jackey/",
+      "title": "2kwh power station - Bluetti, Ecoflow, or Jackey?",
+      "platform": "reddit",
+      "community": "r/prepping",
+      "author": "himynameisnikk",
+      "query": "2kWh power station comparison",
+      "entry_url": "https://www.reddit.com/r/prepping/comments/1p8j8nb/2kwh_power_station_bluetti_ecoflow_or_jackey/",
+      "created_at": "5 months ago (UI label; absolute date not exposed)"
+    },
+    "captured_at": "2026-09-02T11:48:23Z",
+    "raw_text": "I'm looking for a 2kWh power station as a backup for my freezer and have narrowed it down to these options: Bluetti Elite 200 V2: 2074Wh, 2600W output, $699; EcoFlow Delta 3 Max: 2048Wh, 2400W output, $799; Jackery E2000 Plus: 2042Wh, 2200W output, $699. On paper, the specs are very close. Because I have limited space in my garage, I'm currently leaning towards Bluetti Elite 200 V2 due to its smaller size. I'd appreciate any thoughts!",
+    "body_verbatim": "I'm looking for a 2kWh power station as a backup for my freezer and have narrowed it down to these options: Bluetti Elite 200 V2: 2074Wh, 2600W output, $699; EcoFlow Delta 3 Max: 2048Wh, 2400W output, $799; Jackery E2000 Plus: 2042Wh, 2200W output, $699. On paper, the specs are very close. Because I have limited space in my garage, I'm currently leaning towards Bluetti Elite 200 V2 due to its smaller size. I'd appreciate any thoughts!",
+    "page_title": "2kwh power station - Bluetti, Ecoflow, or Jackey? : r/prepping",
+    "permalink": "https://www.reddit.com/r/prepping/comments/1p8j8nb/2kwh_power_station_bluetti_ecoflow_or_jackey/",
+    "engagement": { "score": 7, "comment_count": 21 },
+    "access_status": "accessible",
+    "access_note": "Design sample captured from a real Chromium snapshot; the fixed post showed the three-brand comparison and visible comment articles.",
+    "image_evidence": null,
+    "video_metadata": null
+  }
+]

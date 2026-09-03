@@ -1,0 +1,8 @@
+{
+  "task_id": "rd-002",
+  "revision": 5,
+  "protocol": "reddit-top-v1",
+  "collection": { "query": "Jackery solar charging", "posts": 10, "top_level_comments_per_post": 2 },
+  "answer": { "comments": "highest 5 displayed comment scores; collection order breaks ties" },
+  "checks": ["schema", "selection", "verbatim_text", "displayed_score", "source_urls"]
+}

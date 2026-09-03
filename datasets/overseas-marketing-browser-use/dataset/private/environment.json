@@ -1,0 +1,6 @@
+{
+  "revision": 5,
+  "browser": { "device": "desktop", "viewport": { "width": 1440, "height": 900 }, "locale": "en-US" },
+  "reddit": { "account_state": "controlled benchmark account", "timezone": "UTC" },
+  "google-search": { "region": "US", "language": "English", "personalization": false, "surface": "Web" }
+}

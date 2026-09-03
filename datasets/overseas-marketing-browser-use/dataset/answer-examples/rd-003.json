@@ -1,0 +1,5 @@
+{
+  "posts": [
+    { "title": "<displayed title>", "post_url": "https://www.reddit.com/...", "score": "<displayed score>" }
+  ]
+}

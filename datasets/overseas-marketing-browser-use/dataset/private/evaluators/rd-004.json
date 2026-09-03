@@ -1,0 +1,8 @@
+{
+  "task_id": "rd-004",
+  "revision": 5,
+  "protocol": "reddit-top-v1",
+  "collection": { "Jackery setup": { "posts": 5, "top_level_comments_per_post": 3 }, "Jackery customer service": { "posts": 10, "top_level_comments_per_post": 2 } },
+  "answer": { "setup_posts": "first 3 selected URLs", "customer_service_posts": "first 3 selected URLs" },
+  "checks": ["schema", "query_isolation", "selection", "detail_visit", "source_urls"]
+}

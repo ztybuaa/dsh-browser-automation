@@ -1,0 +1,25 @@
+[
+  {
+    "material_type": "reddit_post",
+    "source": {
+      "url": "https://www.reddit.com/r/Jackery/comments/1rsrezk/long_review_of_jackery_explorer_5000_plus/",
+      "title": "Long review of Jackery Explorer 5000 plus",
+      "platform": "reddit",
+      "community": "r/Jackery",
+      "author": "According_Time3314",
+      "query": "Explorer 5000 Plus",
+      "entry_url": "https://www.reddit.com/r/Jackery/comments/1rsrezk/long_review_of_jackery_explorer_5000_plus/",
+      "created_at": "6 months ago (UI label; absolute date not exposed)"
+    },
+    "captured_at": "2026-09-02T11:47:44Z",
+    "raw_text": "Hello! My wife and I live in a small converted school bus and have been daily using the 5000 plus since it was launched almost a year ago. We use it plugged in and on the 1000w solar bundle, mainly for Starlink, cooking, phone/device charging, and coffee while boondocking. The author reports an early E1 error fixed by reset, app login and internet dependence, Bluetooth shutting off, settings resetting, and a melted solar extension plug that Jackery replaced. TLDR; Great device held back by poor software interface and integration.",
+    "body_verbatim": "Hello! My wife and I live in a small converted school bus and have been daily using the 5000 plus since it was launched almost a year ago go. Here are my thoughts. I’ll start with the good; This unit is reliable, when we first got it, it would cut off randomly with an E1 error but a reset would fix that. However it hasn’t done that in months. We use it both plugged in and on the 1000w of solar we got in the bundle. We mainly use it to power our Starlink and occasionally for cooking. If we’re boondocking then it primarily used for SL and phone/ device charging and making coffee in the morning. It has never failed at a critical time. We’ve been in both hot and cold climates and we use our secondary system to run our fridge and diesel heater. Now for the bad; these can pretty much be handled with firmware updates. The main issue is the app. The app must be connected to the internet and logged into via email and password and frequently kicks you out and forces you to log back in. Which can be an issue if we’re in the middle of nowhere and have to setup our starlink just to get into the app. On top of that, for some reason the Bluetooth on the Explorer will shut off after some time. Because our unit is always on this is a huge issue. I have almost NEVER been able to access the device via the app You have to manually reset the device to turn the bluetooth on. This is my biggest gripe with it. If I need to configure settings or change anything I have to physically press the buttons in order to reset it. Our Jackery is set up under our bed (more than enough airflow) but not enough room for me to comfortably get to it. So I just have to deal with it being set the way it is. And for some reason if I do get to connect to it the settings will have changed, I.e. the quite charge or 0ms setting will reset. (One of our solar panel extension plugs also shorted and melted, Jackery did quickly resolve this and send us out new cords) TLDR; Great device held back by poor software interface and integration.",
+    "page_title": "Long review of Jackery Explorer 5000 plus : r/Jackery",
+    "permalink": "https://www.reddit.com/r/Jackery/comments/1rsrezk/long_review_of_jackery_explorer_5000_plus/",
+    "engagement": { "score": 9, "comment_count": 18 },
+    "access_status": "accessible",
+    "access_note": "Design sample captured from a real Chromium snapshot; top-level comments were visible.",
+    "image_evidence": null,
+    "video_metadata": null
+  }
+]

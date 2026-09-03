@@ -1,0 +1,8 @@
+{
+  "task_id": "rd-001",
+  "revision": 5,
+  "protocol": "reddit-top-v1",
+  "collection": { "query": "\"Explorer 5000 Plus\"", "posts": 10, "top_level_comments_per_post": 3, "images": 3 },
+  "answer": { "comments": "first 5 in collection order", "images": "first 3 encountered in selected posts or comments" },
+  "checks": ["schema", "selection", "verbatim_text", "source_urls", "visible_image_facts"]
+}

@@ -1,0 +1,68 @@
+{
+  "sample_type": "design_stage_search_observation",
+  "checked_on": "2026-09-02",
+  "browser": "Playwright CLI real Chromium, Reddit unsigned-in desktop session",
+  "note": "Query-level evidence for the rewritten Reddit search cases. This is not a complete answer set and does not replace opening each selected post and comment during execution.",
+  "queries": [
+    {
+      "case_id": "rd-001",
+      "url": "https://www.reddit.com/r/Jackery/search/?q=%22Explorer%205000%20Plus%22&restrict_sr=1&sort=top&t=year",
+      "visible_post_count_observed": 14,
+      "examples": [
+        { "title": "Long review of Jackery Explorer 5000 plus", "permalink": "https://www.reddit.com/r/Jackery/comments/1rsrezk/long_review_of_jackery_explorer_5000_plus/" },
+        { "title": "Insulating Explorer 5000 Plus against cold?", "permalink": "https://www.reddit.com/r/Jackery/comments/1q0iakm/insulating_explorer_5000_plus_against_cold/" },
+        { "title": "I am so confused. (Explorer 5000 Plus and STS)", "permalink": "https://www.reddit.com/r/Jackery/comments/1pw80c2/i_am_so_confused_explorer_5000_plus_and_sts/" }
+      ],
+      "access_status": "accessible"
+    },
+    {
+      "case_id": "rd-002",
+      "url": "https://www.reddit.com/r/Jackery/search/?q=Jackery%20solar%20charging&restrict_sr=1&sort=top&t=year",
+      "visible_post_count_observed": 14,
+      "examples": [
+        { "title": "Saw this at Costco. Does this look like an ok deal?", "score": 77, "comment_count": 49 },
+        { "title": "Jackery Explorer 5000 saved me these last 9 days!", "score": 69, "comment_count": 25 },
+        { "title": "3 x SolarSaga 80W panels mounted on top of vehicle", "score": 46, "comment_count": 36 },
+        { "title": "Jackery plus 300 overheating, melting", "score": 44, "comment_count": 66 }
+      ],
+      "access_status": "accessible"
+    },
+    {
+      "case_id": "rd-003",
+      "url": "https://www.reddit.com/r/Jackery/search/?q=Jackery%20review&restrict_sr=1&sort=top&t=year",
+      "visible_post_count_observed": 10,
+      "examples": [
+        { "title": "Jackery 3600 plus review", "score": 21, "comment_count": 13 },
+        { "title": "Long review of Jackery Explorer 5000 plus" },
+        { "title": "How bad is Jackery’s customer service actually. I’ve heard mixed reviews." },
+        { "title": "Real time data graphing of input and output", "score": 1, "comment_count": 1 }
+      ],
+      "access_status": "accessible"
+    },
+    {
+      "case_id": "rd-004",
+      "url": "https://www.reddit.com/r/Jackery/search/?q=Jackery%20setup&restrict_sr=1&sort=top&t=year",
+      "visible_post_count_observed": 7,
+      "examples": [
+        { "title": "My Jackery / Solar tracker setup" },
+        { "title": "Complete Jackery 1000 Plus Setup-Interested to hear about real world use experiences" },
+        { "title": "Why your solar panel isn’t hitting rated wattage: weather, placement, how to fix it" },
+        { "title": "Jackery 3600 plus review" }
+      ],
+      "access_status": "accessible"
+    },
+    {
+      "case_id": "rd-005",
+      "url": "https://www.reddit.com/r/Jackery/search/?q=Jackery%20customer%20service&restrict_sr=1&sort=top&t=year",
+      "visible_post_count_observed": 14,
+      "examples": [
+        { "title": "Feels like I’m getting the runaround" },
+        { "title": "DO NOT EMAIL Jackery for Customer Service" },
+        { "title": "Jackery 5000 combo deal from Home Depot has been a disaster" },
+        { "title": "Shout-out to Jackery support" },
+        { "title": "Firmware update 1.96 messed my 5000 plus" }
+      ],
+      "access_status": "accessible"
+    }
+  ]
+}

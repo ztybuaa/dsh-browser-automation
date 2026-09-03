@@ -1,0 +1,8 @@
+{
+  "task_id": "seo-002",
+  "revision": 5,
+  "protocol": "google-organic-v1",
+  "collection": { "queries": ["Jackery Explorer 5000 Plus", "Explorer 5000 Plus review", "Jackery 5000 Plus specs"], "results_per_query": 10, "max_pages": 2, "opened_unique_urls": 5 },
+  "answer": { "pages": "first 5 unique URLs in flattened result order with four field-presence booleans" },
+  "checks": ["schema", "organic_result_filter", "url_deduplication", "page_visit", "field_presence"]
+}

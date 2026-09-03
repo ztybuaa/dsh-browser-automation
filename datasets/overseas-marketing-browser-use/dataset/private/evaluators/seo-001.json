@@ -1,0 +1,8 @@
+{
+  "task_id": "seo-001",
+  "revision": 5,
+  "protocol": "google-organic-v1",
+  "collection": { "queries": ["Jackery HomePower 3600 Plus", "Jackery 3600 Plus review", "HomePower 3600 Plus specs", "Jackery Explorer 5000 Plus", "Explorer 5000 Plus review", "Jackery 5000 Plus specs"], "results_per_query": 10, "max_pages": 2 },
+  "answer": { "groups": [["homepower-3600", 0, 3], ["explorer-5000", 3, 6]], "official_domain": "jackery.com or a subdomain", "share": "official_count / total_eligible_count; null when denominator is zero" },
+  "checks": ["schema", "organic_result_filter", "visible_domain", "counts", "ratio"]
+}

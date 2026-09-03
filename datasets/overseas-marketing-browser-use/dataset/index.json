@@ -1,0 +1,21 @@
+{
+  "dataset_id": "overseas-marketing-browser-use",
+  "version": "0.4.1",
+  "revision": 5,
+  "status": "pilot",
+  "split": "test",
+  "question_file": "questions.md",
+  "response_schemas": "schemas/responses.schema.json",
+  "tasks": [
+    { "task_id": "rd-003", "site": "reddit", "complexity": "L1", "status": "validated", "answer_example": "answer-examples/rd-003.json" },
+    { "task_id": "rd-002", "site": "reddit", "complexity": "L2", "status": "validated", "answer_example": "answer-examples/rd-002.json" },
+    { "task_id": "rd-001", "site": "reddit", "complexity": "L3", "status": "validated", "answer_example": "answer-examples/rd-001.json" },
+    { "task_id": "rd-004", "site": "reddit", "complexity": "L4", "status": "validated", "answer_example": "answer-examples/rd-004.json" },
+    { "task_id": "rd-005", "site": "reddit", "complexity": "L5", "status": "validated", "answer_example": "answer-examples/rd-005.json" },
+    { "task_id": "seo-001", "site": "google-search", "complexity": "L1", "status": "validated", "answer_example": "answer-examples/seo-001.json" },
+    { "task_id": "seo-002", "site": "google-search", "complexity": "L2", "status": "validated", "answer_example": "answer-examples/seo-002.json" },
+    { "task_id": "seo-003", "site": "google-search", "complexity": "L3", "status": "validated", "answer_example": "answer-examples/seo-003.json" },
+    { "task_id": "seo-004", "site": "google-search", "complexity": "L4", "status": "validated", "answer_example": "answer-examples/seo-004.json" },
+    { "task_id": "seo-005", "site": "google-search", "complexity": "L5", "status": "validated", "answer_example": "answer-examples/seo-005.json" }
+  ]
+}

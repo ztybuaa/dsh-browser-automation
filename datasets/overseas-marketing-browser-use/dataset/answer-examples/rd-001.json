@@ -1,0 +1,8 @@
+{
+  "comments": [
+    { "text": "<verbatim comment>", "comment_url": "https://www.reddit.com/...", "post_url": "https://www.reddit.com/..." }
+  ],
+  "images": [
+    { "image_url": "https://...", "visible_facts": "<literal visible facts>" }
+  ]
+}

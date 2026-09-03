@@ -1,0 +1,15 @@
+{
+  "reddit-top-v1": {
+    "environment": "Desktop Reddit; localized UI labels map Top to 最受欢迎 and Past year to 过去一年; the reference locale is fixed by environment.json",
+    "post_order": "search result DOM order after Top and Past year are applied",
+    "comment_order": "comment DOM order after Top is applied",
+    "top_level_comment": "a direct reply to the post",
+    "shortfall": "keep the observed count and never substitute another query, community, or result"
+  },
+  "google-organic-v1": {
+    "environment": "Google US Web on desktop; localized UI is permitted for the controls, while English results, US region, and personalization state are fixed by environment.json",
+    "result_order": "query order, then page 1 before page 2, then result DOM order",
+    "excluded_modules": ["ads", "AI Overview", "People Also Ask", "shopping", "images", "videos"],
+    "shortfall": "keep the observed count after page 2 and never substitute another query, module, region, or search engine"
+  }
+}

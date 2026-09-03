@@ -1,0 +1,25 @@
+[
+  {
+    "material_type": "reddit_post",
+    "source": {
+      "url": "https://www.reddit.com/r/Jackery/comments/1uh5pk8/homepower_3600_plus/",
+      "title": "Homepower 3600 plus",
+      "platform": "reddit",
+      "community": "r/Jackery",
+      "author": "denied356",
+      "query": "HomePower 3600 Plus home backup",
+      "entry_url": "https://www.reddit.com/r/Jackery/comments/1uh5pk8/homepower_3600_plus/",
+      "created_at": "2 months ago (UI label; absolute date not exposed)"
+    },
+    "captured_at": "2026-09-02T11:45:14Z",
+    "raw_text": "The author describes a power failure, a dual-fuel generator that would not start, and a broken electric start. They bought a Homepower 3600 for about $1400 and want two refrigerators cold for a day or two, plus phones, lights, and possibly a portable AC or space heater. They ask whether to leave it plugged in at 80% and switch to 100% before storms.",
+    "body_verbatim": "So we had a power failure and I fought with my dual fuel generator again that wouldn’t start. I go out and test it every six months or so and it starts right up, then when I need it, it doesn’t start. Also my wife wants to be able to handle the situation and no way she can with the pull-chord now that the electric start is broken. Anyway, I got the Homepower 3600 on Amazon for ~1400 which I felt was a good deal. I’m not looking for whole house power I just want my 2 fridges to stay cold if we lose power for a day or two which happens once or twice a year (downtown ATL) and to be able to charge phones, run a couple lights, etc. Maybe a portable AC or space heater for a single bedroom. My question is do I keep it plugged in all the time? I can keep it at 80% and then flip to 100% if we anticipate bad storms?",
+    "page_title": "Homepower 3600 plus : r/Jackery",
+    "permalink": "https://www.reddit.com/r/Jackery/comments/1uh5pk8/homepower_3600_plus/",
+    "engagement": { "score": 6, "comment_count": 13 },
+    "access_status": "accessible",
+    "access_note": "Design sample captured from a real Chromium snapshot; comments and replies were readable.",
+    "image_evidence": null,
+    "video_metadata": null
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "task_id": "seo-005",
+  "revision": 5,
+  "protocol": "google-organic-v1",
+  "collection": { "queries": ["Jackery vs EcoFlow vs Bluetti vs Anker", "best portable power station Jackery EcoFlow Bluetti", "2kWh portable power station comparison"], "results_per_query": 10, "max_pages": 2, "opened_unique_urls": 5 },
+  "answer": { "results": "each query's observed count and first 3 result URLs" },
+  "checks": ["schema", "literal_queries", "organic_result_filter", "rank_order", "page_visit"]
+}

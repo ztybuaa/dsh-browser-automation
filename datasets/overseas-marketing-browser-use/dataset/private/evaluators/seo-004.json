@@ -1,0 +1,8 @@
+{
+  "task_id": "seo-004",
+  "revision": 5,
+  "protocol": "google-organic-v1",
+  "collection": { "queries": ["Jackery home backup 240V", "Jackery transfer switch", "Jackery whole home backup"], "results_per_query": 10, "max_pages": 2, "opened_unique_urls": 5 },
+  "answer": { "pages": "first 5 unique URLs in flattened result order with access status" },
+  "checks": ["schema", "organic_result_filter", "url_deduplication", "page_visit", "access_status"]
+}

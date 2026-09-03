@@ -1,0 +1,8 @@
+{
+  "task_id": "rd-005",
+  "revision": 5,
+  "protocol": "reddit-top-v1",
+  "collection": { "queries": ["Jackery setup", "Jackery review", "Jackery customer service"], "post_cards_per_query": 5, "unique_posts": 8, "top_level_comments_per_post": 2 },
+  "answer": { "posts": "first 8 unique post URLs in flattened query order with complete query provenance" },
+  "checks": ["schema", "selection", "url_deduplication", "query_provenance", "detail_visit"]
+}
